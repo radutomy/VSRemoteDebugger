@@ -56,7 +56,7 @@
         <Parent guid="guidVSRemoteDebuggerPackageCmdSet" id="MyMenuGroup" />
         <Icon guid="guidImages" id="bmpPic1" />
         <Strings>
-          <ButtonText>Invoke RemoteDebug</ButtonText>
+          <ButtonText>Start Remote Debugging</ButtonText>
         </Strings>
       </Button>
     </Buttons>
