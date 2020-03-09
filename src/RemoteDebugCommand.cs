@@ -135,7 +135,7 @@ namespace VSRemoteDebugger
 		}
 
 		/// <summary>
-		/// create ticketer master folder
+		/// create master folder
 		/// </summary>
 		private void MkDir() => $"mkdir {Remote.MasterFolderPath}".Bash();
 
