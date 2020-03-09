@@ -2,6 +2,7 @@
 using System.Runtime.InteropServices;
 using System.Threading;
 using Microsoft.VisualStudio.Shell;
+using VSRemoteDebugger.OptionsPage;
 using Task = System.Threading.Tasks.Task;
 
 namespace VSRemoteDebugger
@@ -24,10 +25,15 @@ namespace VSRemoteDebugger
     /// </para>
     /// </remarks>
     [PackageRegistration(UseManagedResourcesOnly = true, AllowsBackgroundLoading = true)]
-    [Guid(VSRemoteDebuggerPackage.PackageGuidString)]
+    [Guid(PackageGuidString)]
     [ProvideMenuResource("Menus.ctmenu", 1)]
+    [ProvideOptionPage(typeof(RemoteOptionsPage), "VSRemoteDebugger", "Remote Machine Settings", 0, 0, true)]
     public sealed class VSRemoteDebuggerPackage : AsyncPackage
     {
+        private RemoteOptionsPage _dialogPage => (RemoteOptionsPage)GetDialogPage(typeof(RemoteOptionsPage));
+
+        public string IP => _dialogPage.IP;
+
         /// <summary>
         /// VSRemoteDebuggerPackage GUID string.
         /// </summary>
