@@ -165,7 +165,8 @@ namespace VSRemoteDebugger
 					HostName = Remote.IP,
 					UserName = Remote.HostName,
 					SshPrivateKeyPath = LocalHost.SSH_KEY_PATH + ".ppk",
-					SshHostKeyFingerprint = "ssh-ed25519 255 LCIQQ26tv55Ap0KFtnwPGa03wLaZkhDbGUG1aqS7qeg=",
+					GiveUpSecurityAndAcceptAnySshHostKey = true,
+					//SshHostKeyFingerprint = "ssh-ed25519 255 LCIQQ26tv55Ap0KFtnwPGa03wLaZkhDbGUG1aqS7qeg=",
 				};
 
 				using(var session = new Session())
