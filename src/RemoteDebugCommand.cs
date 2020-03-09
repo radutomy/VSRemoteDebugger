@@ -10,20 +10,20 @@ using Task = System.Threading.Tasks.Task;
 
 namespace VSRemoteDebugger
 {
-    /// <summary>
-    /// Command handler
-    /// </summary>
-    internal sealed class RemoteDebugCommand
-    {
-        /// <summary>
-        /// Command ID.
-        /// </summary>
-        public const int CommandId = 0x0100;
+	/// <summary>
+	/// Command handler
+	/// </summary>
+	internal sealed class RemoteDebugCommand
+	{
+		/// <summary>
+		/// Command ID.
+		/// </summary>
+		public const int CommandId = 0x0100;
 
-        /// <summary>
-        /// Command menu group (command set GUID).
-        /// </summary>
-        public static readonly Guid CommandSet = new Guid("5b4eaa99-73ea-49a5-99c3-bd64eecafa37");
+		/// <summary>
+		/// Command menu group (command set GUID).
+		/// </summary>
+		public static readonly Guid CommandSet = new Guid("5b4eaa99-73ea-49a5-99c3-bd64eecafa37");
 
 		/// <summary>
 		/// VS Package that provides this command, not null.
@@ -32,7 +32,7 @@ namespace VSRemoteDebugger
 
 		public static BuildEvents BuildEvents { get; set; }
 
-		private LocalHost _dev;
+		private LocalHost _lh;
 
 		private bool _isBuildSucceeded;
 
@@ -108,8 +108,6 @@ namespace VSRemoteDebugger
 			ThreadHelper.ThrowIfNotOnUIThread();
 
 			var dte = (DTE2)Package.GetGlobalService(typeof(SDTE));
-			//string startupProject = (string)((object[])dte.Solution.SolutionBuild.StartupProjects).First();
-
 			var project = dte.Solution.GetStartupProject();
 
 			if(project == null)
@@ -117,32 +115,35 @@ namespace VSRemoteDebugger
 				Mbox("No startup project selected");
 			}
 
-			_dev = new LocalHost();
+			_lh = new LocalHost();
 
-			_dev.ProjectFullName = project.FullName;
-			_dev.ProjectName = project.Name;
-			_dev.SolutionFullName = dte.Solution.FullName;
-			_dev.SolutionDirPath = Path.GetDirectoryName(_dev.SolutionFullName);
-			_dev.ProjectConfigName = project.ConfigurationManager.ActiveConfiguration.ConfigurationName;
-			_dev.OutputDirName = project.ConfigurationManager.ActiveConfiguration.Properties.Item("OutputPath").Value.ToString();
-			_dev.OutputDirFullName = Path.Combine(Path.GetDirectoryName(project.FullName), _dev.OutputDirName);
+			_lh.ProjectFullName = project.FullName;
+			_lh.ProjectName = project.Name;
+			_lh.SolutionFullName = dte.Solution.FullName;
+			_lh.SolutionDirPath = Path.GetDirectoryName(_lh.SolutionFullName);
+			_lh.ProjectConfigName = project.ConfigurationManager.ActiveConfiguration.ConfigurationName;
+			_lh.OutputDirName = project.ConfigurationManager.ActiveConfiguration.Properties.Item("OutputPath").Value.ToString();
+			_lh.OutputDirFullName = Path.Combine(Path.GetDirectoryName(project.FullName), _lh.OutputDirName);
 
-			string text = $"ProjectFullName: {_dev.ProjectFullName} \nProjectName: {_dev.ProjectName} \n" +
-				$"SolutionFullName: {_dev.SolutionFullName} \nSolutionDirPath:{_dev.SolutionDirPath} \n" +
-				$"ProjectConfigname: {_dev.ProjectConfigName} \nOutputDirName: {_dev.OutputDirName} \nOutputDirFullName: {_dev.OutputDirFullName}";
-
-			File.WriteAllText(@"C:\Users\RaduTomuleasa\AppData\Local\Test\projSettings.txt", text);
+			string text = $"ProjectFullName: {_lh.ProjectFullName} \nProjectName: {_lh.ProjectName} \n" +
+				$"SolutionFullName: {_lh.SolutionFullName} \nSolutionDirPath:{_lh.SolutionDirPath} \n" +
+				$"ProjectConfigname: {_lh.ProjectConfigName} \nOutputDirName: {_lh.OutputDirName} \nOutputDirFullName: {_lh.OutputDirFullName}";
 		}
 
 		/// <summary>
-		/// create master folder
+		/// create debug/release folders and take ownership
 		/// </summary>
-		private void MkDir() => $"mkdir {Remote.MasterFolderPath}".Bash();
+		private void MkDir()  
+		{ 
+			$"sudo mkdir -p {Remote.DebugFolderPath}".Bash(); 
+			$"sudo mkdir -p {Remote.ReleaseFolderPath}".Bash();
+			$"sudo chown -R {Remote.HostName}:{Remote.GroupName} {Remote.MasterFolderPath}".Bash();
+		}
 
 		/// <summary>
 		/// clean everything in the debug directory
 		/// </summary>
-		private void Clean() => $"rm -rf {Remote.DebugFolderPath}/*".Bash();
+		private void Clean() => $"sudo rm -rf {Remote.DebugFolderPath}/*".Bash();
 
 		private void InstallVSDbg()
 		{
@@ -153,16 +154,11 @@ namespace VSRemoteDebugger
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
 			var dte = (DTE2)Package.GetGlobalService(typeof(SDTE));
-
-			//if(BuildEvents == null)
-			{
-				BuildEvents = dte.Events.BuildEvents;
-				BuildEvents.OnBuildDone += this.BuildEvents_OnBuildDone;
-				BuildEvents.OnBuildProjConfigDone += this.BuildEvents_OnBuildProjConfigDone;
-			}
-
+			BuildEvents = dte.Events.BuildEvents;
+			BuildEvents.OnBuildDone += this.BuildEvents_OnBuildDone;
+			BuildEvents.OnBuildProjConfigDone += this.BuildEvents_OnBuildProjConfigDone;
 			dte.SuppressUI = false;
-			dte.Solution.SolutionBuild.BuildProject(_dev.ProjectConfigName, _dev.ProjectFullName);
+			dte.Solution.SolutionBuild.BuildProject(_lh.ProjectConfigName, _lh.ProjectFullName);
 		}
 
 		private void TransferFiles()
@@ -190,25 +186,11 @@ namespace VSRemoteDebugger
 						TransferMode = TransferMode.Binary
 					};
 
-					//bool exists = false;
-					//while(!exists)
-					//{
-					//	if(File.Exists(Path.Combine(_dev.OutputDirFullName, _dev.ProjectName + ".dll")))
-					//	{
-					//		exists = true;
-					//	}
-					//	else
-					//	{
-					//		File.WriteAllText(@"C:\var.txt", "ERROR");
-					//		System.Threading.Thread.Sleep(200);
-					//	}
-					//}
-
-					var transferResult = session.PutFilesToDirectory(_dev.OutputDirFullName, Remote.DebugFolderPath, null, false, transferOptions);
+					var transferResult = session.PutFilesToDirectory(_lh.OutputDirFullName, Remote.DebugFolderPath, null, false, transferOptions);
 
 					if(!transferResult.IsSuccess)
 					{
-						throw new Exception("YOOO");
+						throw new Exception("Error transferring the files to: " + Remote.DebugFolderPath);
 					}
 
 					// Throw on any error
@@ -225,7 +207,7 @@ namespace VSRemoteDebugger
 		private void Debug()
 		{
 			var dte = (DTE2)Package.GetGlobalService(typeof(SDTE));
-			string jsonPath = _dev.GenJson();
+			string jsonPath = _lh.GenJson();
 			dte.ExecuteCommand("DebugAdapterHost.Launch", $"/LaunchJson:\"{jsonPath}\"");
 
 			File.Delete(jsonPath);
@@ -244,13 +226,11 @@ namespace VSRemoteDebugger
 		{
 			if(!success)
 			{
-				Mbox("Build faled");
+				Mbox($"Build for project {project} failed");
 			}
 
 			string msg = $"Project: {project} --- Success: {success.ToString()}\n";
-
-			File.AppendAllText(@"C:\Users\RaduTomuleasa\AppData\Local\Test\buildresult.txt", msg);
-			_isBuildSucceeded = Path.GetFileName(project) == _dev.ProjectName + ".csproj" && success;
+			_isBuildSucceeded = Path.GetFileName(project) == _lh.ProjectName + ".csproj" && success;
 		}
 
 		/// <summary>

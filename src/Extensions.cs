@@ -16,7 +16,7 @@ namespace VSRemoteDebugger
 			using(var client = new SshClient(Remote.IP, Remote.HostName, connInfo))
 			{
 				client.Connect();
-				client.RunCommand(cmd);
+				var cmds = client.RunCommand(cmd);
 				client.Disconnect();
 			}
 		}
