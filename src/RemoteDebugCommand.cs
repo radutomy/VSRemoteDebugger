@@ -53,13 +53,21 @@ namespace VSRemoteDebugger
 		}
 
 		/// <summary>
+		/// Initializes the singleton instance of the command.
+		/// </summary> 
+		/// <param name="package">Owner package, not null.</param>
+		public static async Task InitializeAsync(AsyncPackage package)
+		{
+			// Switch to the main thread - the call to AddCommand in RemoteDebug's constructor requires the UI thread.
+			await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(package.DisposalToken);
+			var commandService = await package.GetServiceAsync(typeof(IMenuCommandService)).ConfigureAwait(false) as OleMenuCommandService;
+			Instance = new RemoteDebugCommand(package, commandService);
+		}
+
+		/// <summary>
 		/// Gets the instance of the command.
 		/// </summary>
-		public static RemoteDebugCommand Instance
-		{
-			get;
-			private set;
-		}
+		public static RemoteDebugCommand Instance{ get; private set; }
 
 		/// <summary>
 		/// Wrapper around a (alert) messagebox
@@ -72,21 +80,6 @@ namespace VSRemoteDebugger
 			OLEMSGICON.OLEMSGICON_CRITICAL,
 			OLEMSGBUTTON.OLEMSGBUTTON_OK,
 			OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
-
-		/// <summary>
-		/// Initializes the singleton instance of the command.
-		/// </summary> 
-		/// <param name="package">Owner package, not null.</param>
-		public static async Task InitializeAsync(AsyncPackage package)
-		{
-			// Switch to the main thread - the call to AddCommand in RemoteDebug's constructor requires
-			// the UI thread.
-			await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(package.DisposalToken);
-
-			var commandService = await package.GetServiceAsync(typeof(IMenuCommandService)).ConfigureAwait(false) as OleMenuCommandService;
-			Instance = new RemoteDebugCommand(package, commandService);
-		}
-
 
 		/// <summary>
 		/// This function is the callback used to execute the command when the menu item is clicked.
@@ -204,6 +197,9 @@ namespace VSRemoteDebugger
 			}
 		}
 
+		/// <summary>
+		/// Start debugging using the remote visual studio server adapter
+		/// </summary>
 		private void Debug()
 		{
 			var dte = (DTE2)Package.GetGlobalService(typeof(SDTE));

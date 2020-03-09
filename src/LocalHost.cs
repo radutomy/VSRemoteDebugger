@@ -6,24 +6,24 @@ namespace VSRemoteDebugger
 {
     internal class LocalHost
     {
-        public static string DEBUG_ADAPTER_HOST_FILENAME => "launch.json";
-        public static string HOME_DIR_PATH => Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        public static string SSH_KEY_PATH => Path.Combine(HOME_DIR_PATH, ".ssh\\id_rsa");
+        internal static string DEBUG_ADAPTER_HOST_FILENAME => "launch.json";
+        internal static string HOME_DIR_PATH => Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        internal static string SSH_KEY_PATH => Path.Combine(HOME_DIR_PATH, ".ssh\\id_rsa");
 
-        public string DebugAdapterHostFilePath { get; set; }
-        public string ProjectName { get; set; }
-        public string ProjectFullName { get; set; }
-        public string SolutionFullName { get; set; }
-        public string SolutionDirPath { get; set; }
-        public string ProjectConfigName { get; set; }
-        public string OutputDirName { get; set; }
-        public string OutputDirFullName { get; set; }
+        internal string DebugAdapterHostFilePath { get; set; }
+        internal string ProjectName { get; set; }
+        internal string ProjectFullName { get; set; }
+        internal string SolutionFullName { get; set; }
+        internal string SolutionDirPath { get; set; }
+        internal string ProjectConfigName { get; set; }
+        internal string OutputDirName { get; set; }
+        internal string OutputDirFullName { get; set; }
 
         /// <summary>
         /// Generates a temporary json file and returns its path
         /// </summary>
         /// <returns>Full path to the generated json file</returns>
-        public string GenJson()
+        internal string GenJson()
         {
             dynamic json = new JObject();
             json.version = "0.2.0";
