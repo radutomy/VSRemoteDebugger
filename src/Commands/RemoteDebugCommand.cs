@@ -161,7 +161,25 @@ namespace VSRemoteDebugger
 			{
 				using(var process = new System.Diagnostics.Process())
 				{
+<<<<<<< HEAD:src/Commands/RemoteDebugCommand.cs
 					process.StartInfo = new System.Diagnostics.ProcessStartInfo
+=======
+					Protocol = Protocol.Scp,
+					HostName = Remote.IP,
+					UserName = Remote.HostName,
+					SshPrivateKeyPath = LocalHost.SSH_KEY_PATH + ".ppk",
+					GiveUpSecurityAndAcceptAnySshHostKey = true,
+					//SshHostKeyFingerprint = "ssh-ed25519 255 LCIQQ26tv55Ap0KFtnwPGa03wLaZkhDbGUG1aqS7qeg=",
+				};
+
+				using(var session = new Session())
+				{
+					// Connect
+					session.Open(sessionOptions);
+
+					// Upload files
+					var transferOptions = new TransferOptions
+>>>>>>> master:src/RemoteDebugCommand.cs
 					{
 						FileName = "c:\\windows\\sysnative\\openssh\\scp.exe",
 						//Arguments = @"-r C:\Users\RaduTomuleasa\Pictures pi@192.168.0.10:/var/ticketer",
