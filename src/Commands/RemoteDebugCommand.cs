@@ -6,7 +6,6 @@ using EnvDTE80;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 using Renci.SshNet;
-using WinSCP;
 using Task = System.Threading.Tasks.Task;
 
 namespace VSRemoteDebugger
@@ -32,7 +31,7 @@ namespace VSRemoteDebugger
 		private readonly AsyncPackage _package;
 		
 		private VSRemoteDebuggerPackage Remote => _package as VSRemoteDebuggerPackage;
-		private LocalHost _lh;
+		private LocalHost _localhost;
 		private bool _isBuildSucceeded;
 
 		public static BuildEvents BuildEvents { get; set; }
@@ -109,19 +108,19 @@ namespace VSRemoteDebugger
 				Mbox("No startup project selected");
 			}
 
-			_lh = new LocalHost(Remote.UserName, Remote.IP, Remote.VsDbgPath, Remote.DebugFolderPath);
+			_localhost = new LocalHost(Remote.UserName, Remote.IP, Remote.VsDbgPath, Remote.DebugFolderPath);
 
-			_lh.ProjectFullName = project.FullName;
-			_lh.ProjectName = project.Name;
-			_lh.SolutionFullName = dte.Solution.FullName;
-			_lh.SolutionDirPath = Path.GetDirectoryName(_lh.SolutionFullName);
-			_lh.ProjectConfigName = project.ConfigurationManager.ActiveConfiguration.ConfigurationName;
-			_lh.OutputDirName = project.ConfigurationManager.ActiveConfiguration.Properties.Item("OutputPath").Value.ToString();
-			_lh.OutputDirFullName = Path.Combine(Path.GetDirectoryName(project.FullName), _lh.OutputDirName);
+			_localhost.ProjectFullName = project.FullName;
+			_localhost.ProjectName = project.Name;
+			_localhost.SolutionFullName = dte.Solution.FullName;
+			_localhost.SolutionDirPath = Path.GetDirectoryName(_localhost.SolutionFullName);
+			_localhost.ProjectConfigName = project.ConfigurationManager.ActiveConfiguration.ConfigurationName;
+			_localhost.OutputDirName = project.ConfigurationManager.ActiveConfiguration.Properties.Item("OutputPath").Value.ToString();
+			_localhost.OutputDirFullName = Path.Combine(Path.GetDirectoryName(project.FullName), _localhost.OutputDirName);
 
-			string debugtext = $"ProjectFullName: {_lh.ProjectFullName} \nProjectName: {_lh.ProjectName} \n" +
-				$"SolutionFullName: {_lh.SolutionFullName} \nSolutionDirPath:{_lh.SolutionDirPath} \n" +
-				$"ProjectConfigname: {_lh.ProjectConfigName} \nOutputDirName: {_lh.OutputDirName} \nOutputDirFullName: {_lh.OutputDirFullName}";
+			string debugtext = $"ProjectFullName: {_localhost.ProjectFullName} \nProjectName: {_localhost.ProjectName} \n" +
+				$"SolutionFullName: {_localhost.SolutionFullName} \nSolutionDirPath:{_localhost.SolutionDirPath} \n" +
+				$"ProjectConfigname: {_localhost.ProjectConfigName} \nOutputDirName: {_localhost.OutputDirName} \nOutputDirFullName: {_localhost.OutputDirFullName}";
 		}
 
 		/// <summary>
@@ -149,56 +148,39 @@ namespace VSRemoteDebugger
 			ThreadHelper.ThrowIfNotOnUIThread();
 			var dte = (DTE2)Package.GetGlobalService(typeof(SDTE));
 			BuildEvents = dte.Events.BuildEvents;
-			BuildEvents.OnBuildDone += this.BuildEvents_OnBuildDone;
-			BuildEvents.OnBuildProjConfigDone += this.BuildEvents_OnBuildProjConfigDone;
+			BuildEvents.OnBuildDone += BuildEvents_OnBuildDone;
+			BuildEvents.OnBuildProjConfigDone += BuildEvents_OnBuildProjConfigDone;
 			dte.SuppressUI = false;
-			dte.Solution.SolutionBuild.BuildProject(_lh.ProjectConfigName, _lh.ProjectFullName);
+			
+			dte.Solution.SolutionBuild.BuildProject(_localhost.ProjectConfigName, _localhost.ProjectFullName);
 		}
 
 		private void TransferFiles()
 		{
 			try
 			{
-				// Setup session options
-				var sessionOptions = new SessionOptions
+				using(var process = new System.Diagnostics.Process())
 				{
-					Protocol = Protocol.Scp,
-					HostName = Remote.IP,
-					UserName = Remote.UserName,
-					SshPrivateKeyPath = LocalHost.SSH_KEY_PATH + ".ppk",
-					GiveUpSecurityAndAcceptAnySshHostKey = true,
-					
-				};
-
-				using(var session = new WinSCP.Session())
-				{
-					session.DisableVersionCheck = true;
-
-					// Connect
-					session.Open(sessionOptions);
-
-					// Upload files
-					var transferOptions = new TransferOptions
+					process.StartInfo = new System.Diagnostics.ProcessStartInfo
 					{
-						TransferMode = TransferMode.Binary
+						FileName = "c:\\windows\\sysnative\\openssh\\scp.exe",
+						//Arguments = @"-r C:\Users\RaduTomuleasa\Pictures pi@192.168.0.10:/var/ticketer",
+						Arguments = $@"-pr {_localhost.OutputDirFullName}\* {Remote.UserName}@{Remote.IP}:{Remote.DebugFolderPath}",
+						RedirectStandardOutput = true,
+						UseShellExecute = false,
+						CreateNoWindow = true,
 					};
 
-					var transferResult = session.PutFilesToDirectory(_lh.OutputDirFullName, Remote.DebugFolderPath, null, false, transferOptions);
-
-					if(!transferResult.IsSuccess)
-					{
-						throw new Exception("Error transferring the files to: " + Remote.DebugFolderPath);
-					}
-
-					// Throw on any error
-					transferResult.Check();
-
+					process.Start();
+					process.WaitForExit();
 				}
 			}
-			catch(Exception e)
+			catch(Exception ex)
 			{
-				Mbox(e.Message);
+				Mbox("Error transferring files: " + ex.Message);
+				throw;
 			}
+
 		}
 
 		/// <summary>
@@ -207,7 +189,7 @@ namespace VSRemoteDebugger
 		private void Debug()
 		{
 			var dte = (DTE2)Package.GetGlobalService(typeof(SDTE));
-			string jsonPath = _lh.GenJson();
+			string jsonPath = _localhost.GenJson();
 			dte.ExecuteCommand("DebugAdapterHost.Launch", $"/LaunchJson:\"{jsonPath}\"");
 
 			File.Delete(jsonPath);
@@ -215,16 +197,13 @@ namespace VSRemoteDebugger
 
 		private void Cleanup()
 		{
-			BuildEvents.OnBuildDone -= this.BuildEvents_OnBuildDone;
-			BuildEvents.OnBuildProjConfigDone -= this.BuildEvents_OnBuildProjConfigDone;
+			BuildEvents.OnBuildDone -= BuildEvents_OnBuildDone;
+			BuildEvents.OnBuildProjConfigDone -= BuildEvents_OnBuildProjConfigDone;
 		}
 
 		private void Bash(string cmd)
 		{
-			var connInfo = new PrivateKeyFile[]
-			{
-				new PrivateKeyFile(LocalHost.SSH_KEY_PATH)
-			};
+			var connInfo = new PrivateKeyFile[] { new PrivateKeyFile(LocalHost.SSH_KEY_PATH) };
 
 			using(var client = new SshClient(Remote.IP, Remote.UserName, connInfo))
 			{
@@ -238,14 +217,15 @@ namespace VSRemoteDebugger
 		/// The build is finised sucessfully only when the startup project has been compiled without any errors
 		/// </summary>
 		private void BuildEvents_OnBuildProjConfigDone(string project, string projectConfig, string platform, string solutionConfig, bool success)
-		{
+		{ 
+			string debugtext = $"Project: {project} --- Success: {success}\n";
+
 			if(!success)
 			{
 				Cleanup();
 			}
 
-			string debugtext = $"Project: {project} --- Success: {success.ToString()}\n";
-			_isBuildSucceeded = Path.GetFileName(project) == _lh.ProjectName + ".csproj" && success;
+			_isBuildSucceeded = Path.GetFileName(project) == _localhost.ProjectName + ".csproj" && success;
 		}
 
 		/// <summary>
