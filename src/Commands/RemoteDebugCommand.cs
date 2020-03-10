@@ -167,10 +167,13 @@ namespace VSRemoteDebugger
 					UserName = Remote.UserName,
 					SshPrivateKeyPath = LocalHost.SSH_KEY_PATH + ".ppk",
 					GiveUpSecurityAndAcceptAnySshHostKey = true,
+					
 				};
 
 				using(var session = new WinSCP.Session())
 				{
+					session.DisableVersionCheck = true;
+
 					// Connect
 					session.Open(sessionOptions);
 
