@@ -18,26 +18,26 @@ namespace VSRemoteDebugger.OptionsPage
         [Category("Remote Machine Settings")]
         [DisplayName("Group Name")]
         [Description("Remote Machine Group Name")]
-        internal static string GroupName => "pi";
+        public string GroupName { get; set; } = "pi";
 
         [Category("Remote Machine Settings")]
         [DisplayName("Visual Studio Debugger Path")]
         [Description("Remote Machine Visual Studio Debugger Path")]
-        internal static string VsDbgPath => "~/.vsdbg/vsdbg";
+        public string VsDbgPath { get; set; } = "~/.vsdbg/vsdbg";
 
         [Category("Remote Machine Settings")]
         [DisplayName("Project folder")]
         [Description("Master folder for the transferred files")]
-        internal static string MasterFolderPath => "/var/proj";
+        public string MasterFolderPath { get; set; } = "/var/proj";
 
         [Category("Remote Machine Settings")]
         [DisplayName("Debug folder path")]
         [Description("Debug folder path")]
-        internal static string DebugFolderPath => $"{MasterFolderPath}/debug";
+        public string DebugFolderPath { get; set; } = $"/var/proj/debug";
 
         [Category("Remote Machine Settings")]
         [DisplayName("Release folder path")]
         [Description("Release folder path")]
-        internal static string ReleaseFolderPath => $"{MasterFolderPath}/release";
+        public string ReleaseFolderPath { get; set; } = $"/var/proj/release";
     }
 }

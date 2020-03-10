@@ -30,9 +30,15 @@ namespace VSRemoteDebugger
     [ProvideOptionPage(typeof(RemoteOptionsPage), "VSRemoteDebugger", "Remote Machine Settings", 0, 0, true)]
     public sealed class VSRemoteDebuggerPackage : AsyncPackage
     {
-        private RemoteOptionsPage _dialogPage => (RemoteOptionsPage)GetDialogPage(typeof(RemoteOptionsPage));
+        private RemoteOptionsPage RemotePage => (RemoteOptionsPage)GetDialogPage(typeof(RemoteOptionsPage));
 
-        public string IP => _dialogPage.IP;
+        public string IP => RemotePage.IP;
+        public string UserName => RemotePage.UserName;
+        public string GroupName => RemotePage.GroupName;
+        public string VsDbgPath => RemotePage.VsDbgPath;
+        public string MasterFolderPath => RemotePage.MasterFolderPath;
+        public string DebugFolderPath => RemotePage.DebugFolderPath;
+        public string ReleaseFolderPath => RemotePage.ReleaseFolderPath;
 
         /// <summary>
         /// VSRemoteDebuggerPackage GUID string.

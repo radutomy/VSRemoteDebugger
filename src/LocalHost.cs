@@ -6,6 +6,19 @@ namespace VSRemoteDebugger
 {
     internal class LocalHost
     {
+        internal LocalHost(string remoteUserName, string remoteIP, string remoteVsDbgPath, string remoteDebugFolderPath)
+        {
+            _remoteUserName = remoteUserName;
+            _remoteIP = remoteIP;
+            _remoteVsDbgPath = remoteVsDbgPath;
+            _remoteDebugFolderPath = remoteDebugFolderPath;
+        }
+
+        private readonly string _remoteUserName;
+        private readonly string _remoteIP;
+        private readonly string _remoteVsDbgPath;
+        private readonly string _remoteDebugFolderPath;
+
         internal static string DEBUG_ADAPTER_HOST_FILENAME => "launch.json";
         internal static string HOME_DIR_PATH => Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         internal static string SSH_KEY_PATH => Path.Combine(HOME_DIR_PATH, ".ssh\\id_rsa");
@@ -19,6 +32,7 @@ namespace VSRemoteDebugger
         internal string OutputDirName { get; set; }
         internal string OutputDirFullName { get; set; }
 
+
         /// <summary>
         /// Generates a temporary json file and returns its path
         /// </summary>
@@ -28,7 +42,7 @@ namespace VSRemoteDebugger
             dynamic json = new JObject();
             json.version = "0.2.0";
             json.adapter = "c:\\windows\\sysnative\\openssh\\ssh.exe";
-            json.adapterArgs = $"-i ~\\.ssh\\id_rsa {Remote.HostName}@{Remote.IP} {Remote.VsDbgPath} --interpreter=vscode";
+            json.adapterArgs = $"-i ~\\.ssh\\id_rsa {_remoteUserName}@{_remoteIP} {_remoteVsDbgPath} --interpreter=vscode";
 
             json.configurations = new JArray() as dynamic;
             dynamic config = new JObject();
@@ -37,7 +51,7 @@ namespace VSRemoteDebugger
             config.request = "launch";
             config.program = "dotnet";
             config.args = new JArray($"./{ProjectName}.dll");
-            config.cwd = Remote.DebugFolderPath;
+            config.cwd = _remoteDebugFolderPath;
             json.configurations.Add(config);
 
             string tempJsonPath = Path.Combine(Path.GetTempPath(), DEBUG_ADAPTER_HOST_FILENAME);

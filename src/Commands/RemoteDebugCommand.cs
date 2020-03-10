@@ -5,6 +5,7 @@ using EnvDTE;
 using EnvDTE80;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
+using Renci.SshNet;
 using WinSCP;
 using Task = System.Threading.Tasks.Task;
 
@@ -29,12 +30,12 @@ namespace VSRemoteDebugger
 		/// VS Package that provides this command, not null.
 		/// </summary>
 		private readonly AsyncPackage _package;
+		
+		private VSRemoteDebuggerPackage Remote => _package as VSRemoteDebuggerPackage;
+		private LocalHost _lh;
+		private bool _isBuildSucceeded;
 
 		public static BuildEvents BuildEvents { get; set; }
-
-		private LocalHost _lh;
-
-		private bool _isBuildSucceeded;
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="RemoteDebugCommand"/> class.
@@ -108,7 +109,7 @@ namespace VSRemoteDebugger
 				Mbox("No startup project selected");
 			}
 
-			_lh = new LocalHost();
+			_lh = new LocalHost(Remote.UserName, Remote.IP, Remote.VsDbgPath, Remote.DebugFolderPath);
 
 			_lh.ProjectFullName = project.FullName;
 			_lh.ProjectName = project.Name;
@@ -117,26 +118,22 @@ namespace VSRemoteDebugger
 			_lh.ProjectConfigName = project.ConfigurationManager.ActiveConfiguration.ConfigurationName;
 			_lh.OutputDirName = project.ConfigurationManager.ActiveConfiguration.Properties.Item("OutputPath").Value.ToString();
 			_lh.OutputDirFullName = Path.Combine(Path.GetDirectoryName(project.FullName), _lh.OutputDirName);
-
-			string text = $"ProjectFullName: {_lh.ProjectFullName} \nProjectName: {_lh.ProjectName} \n" +
-				$"SolutionFullName: {_lh.SolutionFullName} \nSolutionDirPath:{_lh.SolutionDirPath} \n" +
-				$"ProjectConfigname: {_lh.ProjectConfigName} \nOutputDirName: {_lh.OutputDirName} \nOutputDirFullName: {_lh.OutputDirFullName}";
 		}
 
 		/// <summary>
 		/// create debug/release folders and take ownership
 		/// </summary>
 		private void MkDir()  
-		{ 
-			$"sudo mkdir -p {Remote.DebugFolderPath}".Bash(); 
-			$"sudo mkdir -p {Remote.ReleaseFolderPath}".Bash();
-			$"sudo chown -R {Remote.HostName}:{Remote.GroupName} {Remote.MasterFolderPath}".Bash();
+		{
+			Bash($"sudo mkdir -p {Remote.DebugFolderPath}");
+			Bash($"sudo mkdir -p {Remote.ReleaseFolderPath}");
+			Bash($"sudo chown -R {Remote.UserName}:{Remote.GroupName} {Remote.MasterFolderPath}");
 		}
 
 		/// <summary>
 		/// clean everything in the debug directory
 		/// </summary>
-		private void Clean() => $"sudo rm -rf {Remote.DebugFolderPath}/*".Bash();
+		private void Clean() => Bash($"sudo rm -rf {Remote.DebugFolderPath}/*");
 
 		private void InstallVSDbg()
 		{
@@ -163,12 +160,12 @@ namespace VSRemoteDebugger
 				{
 					Protocol = Protocol.Scp,
 					HostName = Remote.IP,
-					UserName = Remote.HostName,
+					UserName = Remote.UserName,
 					SshPrivateKeyPath = LocalHost.SSH_KEY_PATH + ".ppk",
 					SshHostKeyFingerprint = "ssh-ed25519 255 LCIQQ26tv55Ap0KFtnwPGa03wLaZkhDbGUG1aqS7qeg=",
 				};
 
-				using(var session = new Session())
+				using(var session = new WinSCP.Session())
 				{
 					// Connect
 					session.Open(sessionOptions);
@@ -213,6 +210,21 @@ namespace VSRemoteDebugger
 		{
 			BuildEvents.OnBuildDone -= this.BuildEvents_OnBuildDone;
 			BuildEvents.OnBuildProjConfigDone -= this.BuildEvents_OnBuildProjConfigDone;
+		}
+
+		private void Bash(string cmd)
+		{
+			var connInfo = new PrivateKeyFile[]
+			{
+				new PrivateKeyFile(LocalHost.SSH_KEY_PATH)
+			};
+
+			using(var client = new SshClient(Remote.IP, Remote.UserName, connInfo))
+			{
+				client.Connect();
+				var cmds = client.RunCommand(cmd);
+				client.Disconnect();
+			}
 		}
 
 		/// <summary>
