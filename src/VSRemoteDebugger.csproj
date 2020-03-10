@@ -55,7 +55,6 @@
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Remote.cs" />
     <Compile Include="Commands\RemoteDebugCommand.cs" />
     <Compile Include="Commands\VSRemoteDebuggerPackage.cs" />
   </ItemGroup>
@@ -107,6 +106,10 @@
   <ItemGroup>
     <Content Include="Commands\Resources\RemoteDebug.png" />
     <Content Include="Commands\Resources\RemoteDebug16x16.png" />
+    <Content Include="RemoteDebugger.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

@@ -3,7 +3,7 @@
     <Metadata>
         <Identity Id="VSRemoteDebugger.10d7e79a-8813-4e4b-9c53-67882de01a51" Version="1.0" Language="en-US" Publisher="Radu Tomuleasa" />
         <DisplayName>VSRemoteDebugger</DisplayName>
-        <Description xml:space="preserve">Remote SSH Debugging tool for Visual Studio 2019</Description>
+        <Description xml:space="preserve">Remote SSH Debugging tool for Visual Studio 2019 (ARM/Raspberry Pi compatible)</Description>
         <Icon>Commands\Resources\RemoteDebugger.png</Icon>
     </Metadata>
     <Installation>

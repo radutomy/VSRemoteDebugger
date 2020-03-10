@@ -118,6 +118,10 @@ namespace VSRemoteDebugger
 			_lh.ProjectConfigName = project.ConfigurationManager.ActiveConfiguration.ConfigurationName;
 			_lh.OutputDirName = project.ConfigurationManager.ActiveConfiguration.Properties.Item("OutputPath").Value.ToString();
 			_lh.OutputDirFullName = Path.Combine(Path.GetDirectoryName(project.FullName), _lh.OutputDirName);
+
+			string debugtext = $"ProjectFullName: {_lh.ProjectFullName} \nProjectName: {_lh.ProjectName} \n" +
+				$"SolutionFullName: {_lh.SolutionFullName} \nSolutionDirPath:{_lh.SolutionDirPath} \n" +
+				$"ProjectConfigname: {_lh.ProjectConfigName} \nOutputDirName: {_lh.OutputDirName} \nOutputDirFullName: {_lh.OutputDirFullName}";
 		}
 
 		/// <summary>
@@ -162,7 +166,7 @@ namespace VSRemoteDebugger
 					HostName = Remote.IP,
 					UserName = Remote.UserName,
 					SshPrivateKeyPath = LocalHost.SSH_KEY_PATH + ".ppk",
-					SshHostKeyFingerprint = "ssh-ed25519 255 LCIQQ26tv55Ap0KFtnwPGa03wLaZkhDbGUG1aqS7qeg=",
+					GiveUpSecurityAndAcceptAnySshHostKey = true,
 				};
 
 				using(var session = new WinSCP.Session())
@@ -237,7 +241,7 @@ namespace VSRemoteDebugger
 				Mbox($"Build for project {project} failed");
 			}
 
-			string msg = $"Project: {project} --- Success: {success.ToString()}\n";
+			string debugtext = $"Project: {project} --- Success: {success.ToString()}\n";
 			_isBuildSucceeded = Path.GetFileName(project) == _lh.ProjectName + ".csproj" && success;
 		}
 
