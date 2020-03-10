@@ -238,7 +238,7 @@ namespace VSRemoteDebugger
 		{
 			if(!success)
 			{
-				Mbox($"Build for project {project} failed");
+				Cleanup();
 			}
 
 			string debugtext = $"Project: {project} --- Success: {success.ToString()}\n";
