@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using Microsoft.VisualStudio.Shell;
 using VSRemoteDebugger.OptionsPage;
+using VSRemoteDebugger.OptionsPages;
 using Task = System.Threading.Tasks.Task;
 
 namespace VSRemoteDebugger
@@ -28,9 +29,11 @@ namespace VSRemoteDebugger
     [Guid(PackageGuidString)]
     [ProvideMenuResource("Menus.ctmenu", 1)]
     [ProvideOptionPage(typeof(RemoteOptionsPage), "VSRemoteDebugger", "Remote Machine Settings", 0, 0, true)]
+    [ProvideOptionPage(typeof(LocalOptionsPage), "VSRemoteDebugger", "Local Machine Settings", 0, 0, true)]
     public sealed class VSRemoteDebuggerPackage : AsyncPackage
     {
         private RemoteOptionsPage RemotePage => (RemoteOptionsPage)GetDialogPage(typeof(RemoteOptionsPage));
+        private LocalOptionsPage LocalPage => (LocalOptionsPage)GetDialogPage(typeof(LocalOptionsPage));
 
         public string IP => RemotePage.IP;
         public string UserName => RemotePage.UserName;
@@ -39,6 +42,7 @@ namespace VSRemoteDebugger
         public string MasterFolderPath => RemotePage.MasterFolderPath;
         public string DebugFolderPath => RemotePage.DebugFolderPath;
         public string ReleaseFolderPath => RemotePage.ReleaseFolderPath;
+        public bool IncludewwwrootFolder => LocalPage.Includewwwroot;
 
         /// <summary>
         /// VSRemoteDebuggerPackage GUID string.

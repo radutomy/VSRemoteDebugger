@@ -1,7 +1,9 @@
 ﻿using System;
 using System.ComponentModel.Design;
 using System.IO;
+using System.Threading.Tasks;
 using EnvDTE;
+using EnvDTE100;
 using EnvDTE80;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
@@ -30,9 +32,10 @@ namespace VSRemoteDebugger
 		/// </summary>
 		private readonly AsyncPackage _package;
 		
-		private VSRemoteDebuggerPackage Remote => _package as VSRemoteDebuggerPackage;
+		private VSRemoteDebuggerPackage Settings => _package as VSRemoteDebuggerPackage;
 		private LocalHost _localhost;
 		private bool _isBuildSucceeded;
+		private OutputWindowPane _owp;
 
 		public static BuildEvents BuildEvents { get; set; }
 
@@ -49,6 +52,7 @@ namespace VSRemoteDebugger
 
 			var menuCommandID = new CommandID(CommandSet, CommandId);
 			var menuItem = new MenuCommand(this.Execute, menuCommandID);
+			
 			commandService.AddCommand(menuItem);
 		}
 
@@ -86,14 +90,32 @@ namespace VSRemoteDebugger
 		/// See the constructor to see how the menu item is associated with this function using
 		/// OleMenuCommandService service and MenuCommand class.
 		/// </summary>
-		private void Execute(object sender, EventArgs e)
+		private async void Execute(object sender, EventArgs e)
 		{
-			ThreadHelper.ThrowIfNotOnUIThread();
+			await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
 			InitSolution();
 			MkDir();
 			Clean();
-			Build(); // once this finishes it will raise an event; see BuildEvents_OnBuildDone
+
+			if(Settings.IncludewwwrootFolder)
+			{
+				int exitcode = Publish();
+
+				if (exitcode == 0)
+				{
+					TransferFiles();
+					Debug();
+				}
+				else 
+				{
+					_owp.OutputString("Build Failed");
+				}
+			}
+			else 
+			{
+				Build(); // once this finishes it will raise an event; see BuildEvents_OnBuildDone
+			}
 		}
 
 		private void InitSolution()
@@ -102,13 +124,16 @@ namespace VSRemoteDebugger
 
 			var dte = (DTE2)Package.GetGlobalService(typeof(SDTE));
 			var project = dte.Solution.GetStartupProject();
+			var window = dte.Windows.Item(EnvDTE.Constants.vsWindowKindOutput);
+			var ow = (OutputWindow)window.Object;
+			_owp = ow.OutputWindowPanes.Add("Build Results");
 
 			if(project == null)
 			{
 				Mbox("No startup project selected");
 			}
 
-			_localhost = new LocalHost(Remote.UserName, Remote.IP, Remote.VsDbgPath, Remote.DebugFolderPath);
+			_localhost = new LocalHost(Settings.UserName, Settings.IP, Settings.VsDbgPath, Settings.DebugFolderPath);
 
 			_localhost.ProjectFullName = project.FullName;
 			_localhost.ProjectName = project.Name;
@@ -128,15 +153,15 @@ namespace VSRemoteDebugger
 		/// </summary>
 		private void MkDir()  
 		{
-			Bash($"sudo mkdir -p {Remote.DebugFolderPath}");
-			Bash($"sudo mkdir -p {Remote.ReleaseFolderPath}");
-			Bash($"sudo chown -R {Remote.UserName}:{Remote.GroupName} {Remote.MasterFolderPath}");
+			Bash($"sudo mkdir -p {Settings.DebugFolderPath}");
+			Bash($"sudo mkdir -p {Settings.ReleaseFolderPath}");
+			Bash($"sudo chown -R {Settings.UserName}:{Settings.GroupName} {Settings.MasterFolderPath}");
 		}
 
 		/// <summary>
 		/// clean everything in the debug directory
 		/// </summary>
-		private void Clean() => Bash($"sudo rm -rf {Remote.DebugFolderPath}/*");
+		private void Clean() => Bash($"sudo rm -rf {Settings.DebugFolderPath}/*");
 
 		private void InstallVSDbg()
 		{
@@ -146,13 +171,38 @@ namespace VSRemoteDebugger
 		private void Build()
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
-			var dte = (DTE2)Package.GetGlobalService(typeof(SDTE));
+			var dte = (DTE)Package.GetGlobalService(typeof(DTE));
 			BuildEvents = dte.Events.BuildEvents;
 			BuildEvents.OnBuildDone += BuildEvents_OnBuildDone;
 			BuildEvents.OnBuildProjConfigDone += BuildEvents_OnBuildProjConfigDone;
 			dte.SuppressUI = false;
-			
 			dte.Solution.SolutionBuild.BuildProject(_localhost.ProjectConfigName, _localhost.ProjectFullName);
+		}
+
+		private int Publish()
+		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+
+			using(var process = new System.Diagnostics.Process())
+			{
+				process.StartInfo = new System.Diagnostics.ProcessStartInfo
+				{
+					FileName = "dotnet",
+					Arguments = $@"publish -c {_localhost.ProjectConfigName} --self-contained=false -o {_localhost.OutputDirFullName} {_localhost.ProjectFullName}",
+					RedirectStandardOutput = true,
+					RedirectStandardError = true,
+					UseShellExecute = false,
+					CreateNoWindow = true,
+				};
+
+				process.Start();
+
+				//string output = process.StandardOutput.ReadToEnd();
+				//_owp.OutputString(output);
+				process.WaitForExit();
+
+				return process.ExitCode;
+			}
 		}
 
 		private void TransferFiles()
@@ -164,8 +214,7 @@ namespace VSRemoteDebugger
 					process.StartInfo = new System.Diagnostics.ProcessStartInfo
 					{
 						FileName = "c:\\windows\\sysnative\\openssh\\scp.exe",
-						//Arguments = @"-r C:\Users\RaduTomuleasa\Pictures pi@192.168.0.10:/var/ticketer",
-						Arguments = $@"-pr {_localhost.OutputDirFullName}\* {Remote.UserName}@{Remote.IP}:{Remote.DebugFolderPath}",
+						Arguments = $@"-pr {_localhost.OutputDirFullName}\* {Settings.UserName}@{Settings.IP}:{Settings.DebugFolderPath}",
 						RedirectStandardOutput = true,
 						UseShellExecute = false,
 						CreateNoWindow = true,
@@ -190,7 +239,7 @@ namespace VSRemoteDebugger
 			var dte = (DTE2)Package.GetGlobalService(typeof(SDTE));
 			string jsonPath = _localhost.GenJson();
 			dte.ExecuteCommand("DebugAdapterHost.Launch", $"/LaunchJson:\"{jsonPath}\"");
-
+			
 			File.Delete(jsonPath);
 		}
 
@@ -204,7 +253,7 @@ namespace VSRemoteDebugger
 		{
 			var connInfo = new PrivateKeyFile[] { new PrivateKeyFile(LocalHost.SSH_KEY_PATH) };
 
-			using(var client = new SshClient(Remote.IP, Remote.UserName, connInfo))
+			using(var client = new SshClient(Settings.IP, Settings.UserName, connInfo))
 			{
 				client.Connect();
 				var cmds = client.RunCommand(cmd);

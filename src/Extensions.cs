@@ -6,21 +6,6 @@ namespace VSRemoteDebugger
 {
     public static class Extensions
     {
-		//public static void Bash(this string cmd)
-		//{
-		//	var connInfo = new PrivateKeyFile[]
-		//	{
-		//		new PrivateKeyFile(LocalHost.SSH_KEY_PATH)
-		//	};
-
-		//	using(var client = new SshClient(Remote.IP, Remote.HostName, connInfo))
-		//	{
-		//		client.Connect();
-		//		var cmds = client.RunCommand(cmd);
-		//		client.Disconnect();
-		//	}
-		//}
-
 		/// <summary> 
 		/// Gets the startup project for the given solution. 
 		/// </summary> 
