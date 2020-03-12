@@ -3,12 +3,13 @@ using System.ComponentModel.Design;
 using System.IO;
 using System.Threading.Tasks;
 using EnvDTE;
-using EnvDTE100;
 using EnvDTE80;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 using Renci.SshNet;
 using Task = System.Threading.Tasks.Task;
+using Process = System.Diagnostics.Process;
+using System.Diagnostics;
 
 namespace VSRemoteDebugger
 {
@@ -35,7 +36,6 @@ namespace VSRemoteDebugger
 		private VSRemoteDebuggerPackage Settings => _package as VSRemoteDebuggerPackage;
 		private LocalHost _localhost;
 		private bool _isBuildSucceeded;
-		private OutputWindowPane _owp;
 
 		public static BuildEvents BuildEvents { get; set; }
 
@@ -95,21 +95,34 @@ namespace VSRemoteDebugger
 			await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
 			InitSolution();
-			MkDir();
-			Clean();
+
+			await Task.Run(() => 
+			{ 
+				MkDir(); 
+				Clean();
+
+			}).ConfigureAwait(true);
 
 			if(Settings.IncludewwwrootFolder)
 			{
-				int exitcode = Publish();
+				int exitcode = await PublishAsync().ConfigureAwait(true);
 
-				if (exitcode == 0)
+				if(exitcode == 0)
 				{
-					TransferFiles();
-					Debug();
+					exitcode = await TransferFilesAsync();
+
+					if (exitcode == 0)
+					{ 
+						Debug();
+					}
+					else
+					{
+						Mbox("File transfer to Remote Machine failed");
+					}
 				}
-				else 
+				else
 				{
-					_owp.OutputString("Build Failed");
+					Mbox("Build failed");
 				}
 			}
 			else 
@@ -124,9 +137,6 @@ namespace VSRemoteDebugger
 
 			var dte = (DTE2)Package.GetGlobalService(typeof(SDTE));
 			var project = dte.Solution.GetStartupProject();
-			var window = dte.Windows.Item(EnvDTE.Constants.vsWindowKindOutput);
-			var ow = (OutputWindow)window.Object;
-			_owp = ow.OutputWindowPanes.Add("Build Results");
 
 			if(project == null)
 			{
@@ -179,39 +189,35 @@ namespace VSRemoteDebugger
 			dte.Solution.SolutionBuild.BuildProject(_localhost.ProjectConfigName, _localhost.ProjectFullName);
 		}
 
-		private int Publish()
+		/// <summary>
+		/// Publish the solution. Publishing is done via an external process
+		/// </summary>
+		/// <returns></returns>
+		private async Task<int> PublishAsync()
 		{
-			ThreadHelper.ThrowIfNotOnUIThread();
-
-			using(var process = new System.Diagnostics.Process())
+			using(var process = new Process())
 			{
-				process.StartInfo = new System.Diagnostics.ProcessStartInfo
-				{
-					FileName = "dotnet",
-					Arguments = $@"publish -c {_localhost.ProjectConfigName} --self-contained=false -o {_localhost.OutputDirFullName} {_localhost.ProjectFullName}",
-					RedirectStandardOutput = true,
-					RedirectStandardError = true,
-					UseShellExecute = false,
-					CreateNoWindow = true,
-				};
+				process.StartInfo.FileName = "dotnet";
+				process.StartInfo.Arguments = $@"publish -c {_localhost.ProjectConfigName} --self-contained=false -o {_localhost.OutputDirFullName} {_localhost.ProjectFullName}";
+				process.StartInfo.CreateNoWindow = true;
 
 				process.Start();
 
-				//string output = process.StandardOutput.ReadToEnd();
-				//_owp.OutputString(output);
-				process.WaitForExit();
-
-				return process.ExitCode;
+				return await process.WaitForExitAsync().ConfigureAwait(true);
 			}
 		}
 
-		private void TransferFiles()
+		/// <summary>
+		/// Transfers the files to remote asynchronously. The transfer is done via an external process
+		/// </summary>
+		/// <returns></returns>
+		private async Task<int> TransferFilesAsync()
 		{
 			try
 			{
-				using(var process = new System.Diagnostics.Process())
+				using(var process = new Process())
 				{
-					process.StartInfo = new System.Diagnostics.ProcessStartInfo
+					process.StartInfo = new ProcessStartInfo
 					{
 						FileName = "c:\\windows\\sysnative\\openssh\\scp.exe",
 						Arguments = $@"-pr {_localhost.OutputDirFullName}\* {Settings.UserName}@{Settings.IP}:{Settings.DebugFolderPath}",
@@ -221,7 +227,7 @@ namespace VSRemoteDebugger
 					};
 
 					process.Start();
-					process.WaitForExit();
+					return await process.WaitForExitAsync().ConfigureAwait(true);
 				}
 			}
 			catch(Exception ex)
@@ -279,13 +285,17 @@ namespace VSRemoteDebugger
 		/// <summary>
 		/// Build finished. We can now transfer the files to the remote host and start debugging the program
 		/// </summary>
-		private void BuildEvents_OnBuildDone(vsBuildScope scope, vsBuildAction action)
+		private async void BuildEvents_OnBuildDone(vsBuildScope scope, vsBuildAction action)
 		{
 			if(_isBuildSucceeded)
 			{
-				TransferFiles();
-				Debug();
-				Cleanup();
+				int exitcode = await TransferFilesAsync().ConfigureAwait(true);
+
+				if(exitcode == 0)
+				{
+					Debug();
+					Cleanup();
+				}
 			}
 		}
 	}
