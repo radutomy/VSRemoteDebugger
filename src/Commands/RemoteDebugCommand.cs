@@ -103,7 +103,7 @@ namespace VSRemoteDebugger
 
 			}).ConfigureAwait(true);
 
-			if(Settings.IncludewwwrootFolder)
+			if(Settings.Publish)
 			{
 				int exitcode = await PublishAsync().ConfigureAwait(true);
 
@@ -295,6 +295,10 @@ namespace VSRemoteDebugger
 				{
 					Debug();
 					Cleanup();
+				}
+				else
+				{
+					Mbox("Transferring the files failed");
 				}
 			}
 		}

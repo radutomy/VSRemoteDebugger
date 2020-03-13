@@ -42,7 +42,7 @@ namespace VSRemoteDebugger
         public string MasterFolderPath => RemotePage.MasterFolderPath;
         public string DebugFolderPath => RemotePage.DebugFolderPath;
         public string ReleaseFolderPath => RemotePage.ReleaseFolderPath;
-        public bool IncludewwwrootFolder => LocalPage.Includewwwroot;
+        public bool Publish => LocalPage.Publish;
 
         /// <summary>
         /// VSRemoteDebuggerPackage GUID string.

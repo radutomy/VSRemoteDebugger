@@ -6,8 +6,8 @@ namespace VSRemoteDebugger.OptionsPages
     public class LocalOptionsPage : DialogPage
     {
         [Category("Local Machine Settings")]
-        [DisplayName("Include wwwroot")]
-        [Description("If the startup folder has a wwwroot folder, it is included in the build output")]
-        public bool Includewwwroot { get; set; } = false;
+        [DisplayName("Publish")]
+        [Description("Publishes the solution rather than building it. Useful for ASP.NET/Blazor projects. Only compatible with .NET Core due to inherit limitations in Visual Studio")]
+        public bool Publish { get; set; } = false;
     }
 }
