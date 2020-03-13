@@ -23,3 +23,6 @@ Remote SSH Debugging tool for Visual Studio 2019 (ARM/Raspberry Pi compatible)
 - Publishing only available for .NET Core projects
 - Not tested (and most likely not working) for 32-bit versions of Windows
 
+## Demo
+
+![](VSRemoteDebuggerDemo.gif)
