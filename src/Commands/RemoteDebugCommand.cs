@@ -109,7 +109,7 @@ namespace VSRemoteDebugger
 
 				if(exitcode == 0)
 				{
-					exitcode = await TransferFilesAsync();
+					exitcode = await TransferFilesAsync().ConfigureAwait(true);
 
 					if (exitcode == 0)
 					{ 
