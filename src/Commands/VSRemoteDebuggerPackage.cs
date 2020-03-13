@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Microsoft.VisualStudio.Shell;
@@ -39,9 +40,9 @@ namespace VSRemoteDebugger
         public string UserName => RemotePage.UserName;
         public string GroupName => RemotePage.GroupName;
         public string VsDbgPath => RemotePage.VsDbgPath;
-        public string MasterFolderPath => RemotePage.MasterFolderPath;
-        public string DebugFolderPath => RemotePage.DebugFolderPath;
-        public string ReleaseFolderPath => RemotePage.ReleaseFolderPath;
+        public string AppFolderPath => RemotePage.AppFolderPath;
+        public string DebugFolderPath => AppFolderPath + "/debug";
+        public string ReleaseFolderPath => AppFolderPath + "/release";
         public bool Publish => LocalPage.Publish;
 
         /// <summary>

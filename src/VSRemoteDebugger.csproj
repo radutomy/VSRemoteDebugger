@@ -104,8 +104,11 @@
     </VSCTCompile>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Commands\Resources\RemoteDebug.png" />
     <Content Include="Commands\Resources\RemoteDebug16x16.png" />
+    <Content Include="Commands\Resources\RemoteDebugger.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
     <Content Include="RemoteDebugger.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <IncludeInVSIX>true</IncludeInVSIX>

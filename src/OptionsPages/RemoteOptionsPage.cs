@@ -28,16 +28,6 @@ namespace VSRemoteDebugger.OptionsPage
         [Category("Remote Machine Settings")]
         [DisplayName("Project folder")]
         [Description("Master folder for the transferred files")]
-        public string MasterFolderPath { get; set; } = "/var/proj";
-
-        [Category("Remote Machine Settings")]
-        [DisplayName("Debug folder path")]
-        [Description("Debug folder path")]
-        public string DebugFolderPath { get; set; } = $"/var/proj/debug";
-
-        [Category("Remote Machine Settings")]
-        [DisplayName("Release folder path")]
-        [Description("Release folder path")]
-        public string ReleaseFolderPath { get; set; } = $"/var/proj/release";
+        public string AppFolderPath { get; set; } = "/var/proj";
     }
 }

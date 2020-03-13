@@ -94,53 +94,69 @@ namespace VSRemoteDebugger
 		{
 			await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
-			InitSolution();
+			bool connected = await Task.Run(() => CheckConnWithRemote()).ConfigureAwait(true);
 
-			await Task.Run(() => 
-			{ 
-				MkDir(); 
-				Clean();
-
-			}).ConfigureAwait(true);
-
-			if(Settings.Publish)
+			if(!connected)
 			{
-				int exitcode = await PublishAsync().ConfigureAwait(true);
-
-				if(exitcode == 0)
+				Mbox($"Cannot connect to  {Settings.UserName}:{Settings.IP}. Connection refused");
+			}
+			else
+			{
+				if (!InitSolution())
 				{
-					exitcode = await TransferFilesAsync().ConfigureAwait(true);
-
-					if (exitcode == 0)
-					{ 
-						Debug();
-					}
-					else
-					{
-						Mbox("File transfer to Remote Machine failed");
-					}
+					Mbox("Please select a startup project");
 				}
 				else
 				{
-					Mbox("Build failed");
+					await Task.Run(() =>
+					{
+						MkDir();
+						Clean();
+
+					}).ConfigureAwait(true);
+
+					if (!Settings.Publish)
+					{
+						Build(); // once this finishes it will raise an event; see BuildEvents_OnBuildDone
+					}
+					else
+					{
+						int exitcode = await PublishAsync().ConfigureAwait(true);
+
+						if (exitcode != 0)
+						{
+							Mbox("File transfer to Remote Machine failed");
+						}
+						else
+						{
+							exitcode = await TransferFilesAsync().ConfigureAwait(true);
+
+							if (exitcode != 0)
+							{
+								Mbox("Build failed");
+							}
+							else
+							{
+								Debug();
+							}
+						}
+					}
 				}
-			}
-			else 
-			{
-				Build(); // once this finishes it will raise an event; see BuildEvents_OnBuildDone
 			}
 		}
 
-		private void InitSolution()
+		/// <summary>
+		/// Must be called on the UI thread
+		/// </summary>
+		private bool InitSolution()
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
-
 			var dte = (DTE2)Package.GetGlobalService(typeof(SDTE));
 			var project = dte.Solution.GetStartupProject();
 
-			if(project == null)
+			if (project == null)
 			{
-				Mbox("No startup project selected");
+				return false;
 			}
 
 			_localhost = new LocalHost(Settings.UserName, Settings.IP, Settings.VsDbgPath, Settings.DebugFolderPath);
@@ -156,6 +172,25 @@ namespace VSRemoteDebugger
 			string debugtext = $"ProjectFullName: {_localhost.ProjectFullName} \nProjectName: {_localhost.ProjectName} \n" +
 				$"SolutionFullName: {_localhost.SolutionFullName} \nSolutionDirPath:{_localhost.SolutionDirPath} \n" +
 				$"ProjectConfigname: {_localhost.ProjectConfigName} \nOutputDirName: {_localhost.OutputDirName} \nOutputDirFullName: {_localhost.OutputDirFullName}";
+
+			return true;
+		}
+
+		/// <summary>
+		/// Checks if a connection with the remote machine can be established
+		/// </summary>
+		/// <returns></returns>
+		private bool CheckConnWithRemote()
+		{
+			try
+			{
+				Bash("echo hello");
+				return true;
+			}
+			catch(Exception)
+			{
+				return false;
+			}
 		}
 
 		/// <summary>
@@ -165,7 +200,7 @@ namespace VSRemoteDebugger
 		{
 			Bash($"sudo mkdir -p {Settings.DebugFolderPath}");
 			Bash($"sudo mkdir -p {Settings.ReleaseFolderPath}");
-			Bash($"sudo chown -R {Settings.UserName}:{Settings.GroupName} {Settings.MasterFolderPath}");
+			Bash($"sudo chown -R {Settings.UserName}:{Settings.GroupName} {Settings.AppFolderPath}");
 		}
 
 		/// <summary>
@@ -215,7 +250,7 @@ namespace VSRemoteDebugger
 		{
 			try
 			{
-				using(var process = new Process())
+				using (var process = new Process())
 				{
 					process.StartInfo = new ProcessStartInfo
 					{
@@ -230,10 +265,9 @@ namespace VSRemoteDebugger
 					return await process.WaitForExitAsync().ConfigureAwait(true);
 				}
 			}
-			catch(Exception ex)
+			catch(Exception)
 			{
-				Mbox("Error transferring files: " + ex.Message);
-				throw;
+				return -1;
 			}
 		}
 
@@ -258,12 +292,20 @@ namespace VSRemoteDebugger
 		private void Bash(string cmd)
 		{
 			var connInfo = new PrivateKeyFile[] { new PrivateKeyFile(LocalHost.SSH_KEY_PATH) };
-
-			using(var client = new SshClient(Settings.IP, Settings.UserName, connInfo))
+			
+			try
 			{
-				client.Connect();
-				var cmds = client.RunCommand(cmd);
-				client.Disconnect();
+				using (var client = new SshClient(Settings.IP, Settings.UserName, connInfo))
+				{
+					client.ConnectionInfo.Timeout = TimeSpan.FromSeconds(5);
+					client.Connect();
+					var cmds = client.RunCommand(cmd);
+					client.Disconnect();
+				}
+			}
+			catch(Exception)
+			{
+				throw;
 			}
 		}
 
@@ -274,7 +316,7 @@ namespace VSRemoteDebugger
 		{ 
 			string debugtext = $"Project: {project} --- Success: {success}\n";
 
-			if(!success)
+			if (!success)
 			{
 				Cleanup();
 			}
@@ -287,11 +329,11 @@ namespace VSRemoteDebugger
 		/// </summary>
 		private async void BuildEvents_OnBuildDone(vsBuildScope scope, vsBuildAction action)
 		{
-			if(_isBuildSucceeded)
+			if (_isBuildSucceeded)
 			{
 				int exitcode = await TransferFilesAsync().ConfigureAwait(true);
 
-				if(exitcode == 0)
+				if (exitcode == 0)
 				{
 					Debug();
 					Cleanup();

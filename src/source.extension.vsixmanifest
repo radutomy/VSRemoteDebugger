@@ -5,6 +5,7 @@
         <DisplayName>VSRemoteDebugger</DisplayName>
         <Description xml:space="preserve">Remote SSH Debugging tool for Visual Studio 2019 (ARM/Raspberry Pi compatible)</Description>
         <Icon>Commands\Resources\RemoteDebugger.png</Icon>
+        <PreviewImage>Commands\Resources\RemoteDebugger.png</PreviewImage>
     </Metadata>
     <Installation>
         <InstallationTarget Id="Microsoft.VisualStudio.Community" Version="[16.0, 17.0)" />
