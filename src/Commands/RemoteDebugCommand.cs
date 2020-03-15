@@ -110,6 +110,7 @@ namespace VSRemoteDebugger
 				{
 					await Task.Run(() =>
 					{
+						TryInstallVsDbg();
 						MkDir();
 						Clean();
 
@@ -208,10 +209,10 @@ namespace VSRemoteDebugger
 		/// </summary>
 		private void Clean() => Bash($"sudo rm -rf {Settings.DebugFolderPath}/*");
 
-		private void InstallVSDbg()
-		{
-
-		}
+		/// <summary>
+		/// Instals VS Debugger if it doesn't exist already
+		/// </summary>
+		private void TryInstallVsDbg() => Bash("[ -d /home/pi/.vsdbg ] || curl -sSL https://aka.ms/getvsdbgsh | bash /dev/stdin -r linux-arm -v latest -l ~/.vsdbg");
 
 		private void Build()
 		{
@@ -299,7 +300,7 @@ namespace VSRemoteDebugger
 				{
 					client.ConnectionInfo.Timeout = TimeSpan.FromSeconds(5);
 					client.Connect();
-					var cmds = client.RunCommand(cmd);
+					var result = client.RunCommand(cmd);
 					client.Disconnect();
 				}
 			}
