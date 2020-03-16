@@ -16,9 +16,9 @@ Remote SSH Debugging tool for Visual Studio 2019 (ARM/Raspberry Pi compatible)
 
 1. Builds the solution in Visual Studio 
 2. Creates the necessary file structure on the remote machine
-2.a. (optional) if running for the first time, installs Visual Studio's vsdbg debugging server on the remote machine
-3. Copies the files from the output folder into the remote machine
-4. Connects to the VsDbg server and starts debugging the current project via SSH
+3. (optional) if running for the first time, installs Visual Studio's vsdbg debugging server on the remote machine
+4. Copies the files from the output folder into the remote machine
+5. Connects to the VsDbg server and starts debugging the current project via SSH
 
 ## Limitations
 
