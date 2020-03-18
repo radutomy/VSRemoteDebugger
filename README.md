@@ -9,7 +9,7 @@ Remote SSH Debugging tool for Visual Studio 2019 (ARM/Raspberry Pi compatible)
 	Set the public key on the remote machine as `~/.ssh/authorized_keys`
 
 - Install this extension
-- In Visual Studio go to `Tools -> Settings -> VsRemoteDebugger -> Remote Machine Settings` and modify the access settings
+- In Visual Studio go to `Tools -> Options -> VsRemoteDebugger -> Remote Machine Settings` and modify the access settings
 - In Visual Studio go to `Tools -> (click on) Start Remote Debugger`
 
 ## The extension performs the following steps:
