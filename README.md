@@ -3,11 +3,13 @@ Remote SSH Debugging tool for Visual Studio 2019 (ARM/Raspberry Pi compatible)
 
 ## Usage guide
 
-- SSH based authentification needs to be set up between local and remote.
+- SSH based authentification needs to be set up between local and remote. Follow the following guide:
+https://www.onmsft.com/how-to/how-to-generate-an-ssh-key-in-windows-10
 
-	Set the private key on the local machine as `~\.ssh\id_rsa`  
-	Set the public key on the remote machine as `~/.ssh/authorized_keys`
+	Rename the private key on the local machine as `~\.ssh\id_rsa`
+	Rename the public key on the remote machine as `~/.ssh/authorized_keys`
 
+Make sure the keys are working before proceeding!!
 - Install this extension
 - In Visual Studio go to `Tools -> Options -> VsRemoteDebugger -> Remote Machine Settings` and modify the access settings
 - In Visual Studio go to `Tools -> (click on) Start Remote Debugger`
