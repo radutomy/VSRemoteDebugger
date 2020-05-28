@@ -17,9 +17,8 @@ variables:
   buildConfiguration: 'Release'
 
 steps:
-- powershell: | 
-    $tag = git describe
-    write-host "##vso[build.updatebuildnumber]$tag"
+- powershell: |
+    write-host "##vso[build.updatebuildnumber]12.2"
 
 - task: NuGetToolInstaller@1
 
