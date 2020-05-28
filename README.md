@@ -5,8 +5,7 @@ Remote SSH Debugging tool for Visual Studio 2019 (ARM/Raspberry Pi compatible)
 
 - SSH based authentification needs to be set up between local and remote. Follow the following guide:
 https://www.onmsft.com/how-to/how-to-generate-an-ssh-key-in-windows-10
-
-	Rename the private key on the local machine as `~\.ssh\id_rsa`
+	
 	Rename the public key on the remote machine as `~/.ssh/authorized_keys`
 
 Make sure the keys are working before proceeding!!
