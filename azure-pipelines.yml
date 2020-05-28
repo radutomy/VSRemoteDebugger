@@ -18,7 +18,7 @@ variables:
 
 steps:
 - powershell: |
-    $tag = git describe
+    $tag = git describe --tags $(git rev-list --tags --max-count=1)
     write-host "##vso[build.updatebuildnumber]$tag"
 
 - task: NuGetToolInstaller@1
