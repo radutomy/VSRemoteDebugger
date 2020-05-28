@@ -18,7 +18,8 @@ variables:
 
 steps:
 - powershell: |
-    write-host "##vso[build.updatebuildnumber]12.2"
+    $tag = git describe
+    write-host "##vso[build.updatebuildnumber]$tag"
 
 - task: NuGetToolInstaller@1
 
