@@ -40,6 +40,7 @@ namespace VSRemoteDebugger
         public string UserName => RemotePage.UserName;
         public string GroupName => RemotePage.GroupName;
         public string VsDbgPath => RemotePage.VsDbgPath;
+        public string DotnetPath => RemotePage.DotnetPath;
         public string AppFolderPath => RemotePage.AppFolderPath;
         public string DebugFolderPath => AppFolderPath + "/debug";
         public string ReleaseFolderPath => AppFolderPath + "/release";

@@ -6,17 +6,19 @@ namespace VSRemoteDebugger
 {
     internal class LocalHost
     {
-        internal LocalHost(string remoteUserName, string remoteIP, string remoteVsDbgPath, string remoteDebugFolderPath)
+        internal LocalHost(string remoteUserName, string remoteIP, string remoteVsDbgPath, string remoteDotnetPath, string remoteDebugFolderPath)
         {
             _remoteUserName = remoteUserName;
             _remoteIP = remoteIP;
             _remoteVsDbgPath = remoteVsDbgPath;
+            _remoteDotnetPath = remoteDotnetPath;
             _remoteDebugFolderPath = remoteDebugFolderPath;
         }
 
         private readonly string _remoteUserName;
         private readonly string _remoteIP;
         private readonly string _remoteVsDbgPath;
+        private readonly string _remoteDotnetPath;
         private readonly string _remoteDebugFolderPath;
 
         internal static string DEBUG_ADAPTER_HOST_FILENAME => "launch.json";
@@ -42,16 +44,18 @@ namespace VSRemoteDebugger
             dynamic json = new JObject();
             json.version = "0.2.0";
             json.adapter = "c:\\windows\\sysnative\\openssh\\ssh.exe";
-            json.adapterArgs = $"-i ~\\.ssh\\id_rsa {_remoteUserName}@{_remoteIP} {_remoteVsDbgPath} --interpreter=vscode";
+            json.adapterArgs = $"-i {SSH_KEY_PATH} {_remoteUserName}@{_remoteIP} {_remoteVsDbgPath} --interpreter=vscode";
 
             json.configurations = new JArray() as dynamic;
             dynamic config = new JObject();
             config.project = "default";
             config.type = "coreclr";
             config.request = "launch";
-            config.program = "dotnet";
+            config.program = _remoteDotnetPath;
             config.args = new JArray($"./{ProjectName}.dll");
             config.cwd = _remoteDebugFolderPath;
+            config.stopAtEntry = "false";
+            config.console = "internalConsole";
             json.configurations.Add(config);
 
             string tempJsonPath = Path.Combine(Path.GetTempPath(), DEBUG_ADAPTER_HOST_FILENAME);

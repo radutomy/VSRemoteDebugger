@@ -32,7 +32,7 @@ namespace VSRemoteDebugger
 		/// VS Package that provides this command, not null.
 		/// </summary>
 		private readonly AsyncPackage _package;
-		
+
 		private VSRemoteDebuggerPackage Settings => _package as VSRemoteDebuggerPackage;
 		private LocalHost _localhost;
 		private bool _isBuildSucceeded;
@@ -52,13 +52,13 @@ namespace VSRemoteDebugger
 
 			var menuCommandID = new CommandID(CommandSet, CommandId);
 			var menuItem = new MenuCommand(this.Execute, menuCommandID);
-			
+
 			commandService.AddCommand(menuItem);
 		}
 
 		/// <summary>
 		/// Initializes the singleton instance of the command.
-		/// </summary> 
+		/// </summary>
 		/// <param name="package">Owner package, not null.</param>
 		public static async Task InitializeAsync(AsyncPackage package)
 		{
@@ -160,7 +160,7 @@ namespace VSRemoteDebugger
 				return false;
 			}
 
-			_localhost = new LocalHost(Settings.UserName, Settings.IP, Settings.VsDbgPath, Settings.DebugFolderPath);
+			_localhost = new LocalHost(Settings.UserName, Settings.IP, Settings.VsDbgPath, Settings.DotnetPath, Settings.DebugFolderPath);
 
 			_localhost.ProjectFullName = project.FullName;
 			_localhost.ProjectName = project.Name;
@@ -197,7 +197,7 @@ namespace VSRemoteDebugger
 		/// <summary>
 		/// create debug/release folders and take ownership
 		/// </summary>
-		private void MkDir()  
+		private void MkDir()
 		{
 			Bash($"sudo mkdir -p {Settings.DebugFolderPath}");
 			Bash($"sudo mkdir -p {Settings.ReleaseFolderPath}");
@@ -212,7 +212,7 @@ namespace VSRemoteDebugger
 		/// <summary>
 		/// Instals VS Debugger if it doesn't exist already
 		/// </summary>
-		private void TryInstallVsDbg() => Bash("[ -d /home/pi/.vsdbg ] || curl -sSL https://aka.ms/getvsdbgsh | bash /dev/stdin -r linux-arm -v latest -l ~/.vsdbg");
+		private void TryInstallVsDbg() => Bash("[ -d ~/.vsdbg ] || curl -sSL https://aka.ms/getvsdbgsh | bash /dev/stdin -r linux-arm -v latest -l ~/.vsdbg");
 
 		private void Build()
 		{
@@ -234,7 +234,7 @@ namespace VSRemoteDebugger
 			using(var process = new Process())
 			{
 				process.StartInfo.FileName = "dotnet";
-				process.StartInfo.Arguments = $@"publish -c {_localhost.ProjectConfigName} --self-contained=false -o {_localhost.OutputDirFullName} {_localhost.ProjectFullName}";
+				process.StartInfo.Arguments = $@"publish -c {_localhost.ProjectConfigName} -r linux-arm --self-contained=false -o {_localhost.OutputDirFullName} {_localhost.ProjectFullName}";
 				process.StartInfo.CreateNoWindow = true;
 
 				process.Start();
@@ -280,7 +280,7 @@ namespace VSRemoteDebugger
 			var dte = (DTE2)Package.GetGlobalService(typeof(SDTE));
 			string jsonPath = _localhost.GenJson();
 			dte.ExecuteCommand("DebugAdapterHost.Launch", $"/LaunchJson:\"{jsonPath}\"");
-			
+
 			File.Delete(jsonPath);
 		}
 
@@ -293,7 +293,7 @@ namespace VSRemoteDebugger
 		private void Bash(string cmd)
 		{
 			var connInfo = new PrivateKeyFile[] { new PrivateKeyFile(LocalHost.SSH_KEY_PATH) };
-			
+
 			try
 			{
 				using (var client = new SshClient(Settings.IP, Settings.UserName, connInfo))
@@ -314,7 +314,7 @@ namespace VSRemoteDebugger
 		/// The build is finised sucessfully only when the startup project has been compiled without any errors
 		/// </summary>
 		private void BuildEvents_OnBuildProjConfigDone(string project, string projectConfig, string platform, string solutionConfig, bool success)
-		{ 
+		{
 			string debugtext = $"Project: {project} --- Success: {success}\n";
 
 			if (!success)
@@ -341,7 +341,7 @@ namespace VSRemoteDebugger
 				}
 				else
 				{
-					Mbox("Transferring the files failed");
+					Mbox("Transferring files failed");
 				}
 			}
 		}
