@@ -26,6 +26,11 @@ namespace VSRemoteDebugger.OptionsPage
         public string VsDbgPath { get; set; } = "~/.vsdbg/vsdbg";
 
         [Category("Remote Machine Settings")]
+        [DisplayName(".Net Path")]
+        [Description("Remote Machine .Net Path")]
+        public string DotnetPath { get; set; } = "~/.dotnet/dotnet";
+
+        [Category("Remote Machine Settings")]
         [DisplayName("Project folder")]
         [Description("Master folder for the transferred files")]
         public string AppFolderPath { get; set; } = "/var/proj";
