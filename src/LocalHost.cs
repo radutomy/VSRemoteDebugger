@@ -27,13 +27,13 @@ namespace VSRemoteDebugger
 
         internal string DebugAdapterHostFilePath { get; set; }
         internal string ProjectName { get; set; }
+        internal string Assemblyname { get; set; }
         internal string ProjectFullName { get; set; }
         internal string SolutionFullName { get; set; }
         internal string SolutionDirPath { get; set; }
         internal string ProjectConfigName { get; set; }
         internal string OutputDirName { get; set; }
         internal string OutputDirFullName { get; set; }
-
 
         /// <summary>
         /// Generates a temporary json file and returns its path
@@ -52,7 +52,7 @@ namespace VSRemoteDebugger
             config.type = "coreclr";
             config.request = "launch";
             config.program = _remoteDotnetPath;
-            config.args = new JArray($"./{ProjectName}.dll");
+            config.args = new JArray($"./{Assemblyname}.dll");
             config.cwd = _remoteDebugFolderPath;
             config.stopAtEntry = "false";
             config.console = "internalConsole";

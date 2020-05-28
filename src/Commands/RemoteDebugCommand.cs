@@ -161,9 +161,10 @@ namespace VSRemoteDebugger
 			}
 
 			_localhost = new LocalHost(Settings.UserName, Settings.IP, Settings.VsDbgPath, Settings.DotnetPath, Settings.DebugFolderPath);
-
+				
 			_localhost.ProjectFullName = project.FullName;
 			_localhost.ProjectName = project.Name;
+			_localhost.Assemblyname = project.Properties.Item("AssemblyName").Value.ToString();
 			_localhost.SolutionFullName = dte.Solution.FullName;
 			_localhost.SolutionDirPath = Path.GetDirectoryName(_localhost.SolutionFullName);
 			_localhost.ProjectConfigName = project.ConfigurationManager.ActiveConfiguration.ConfigurationName;
@@ -236,7 +237,6 @@ namespace VSRemoteDebugger
 				process.StartInfo.FileName = "dotnet";
 				process.StartInfo.Arguments = $@"publish -c {_localhost.ProjectConfigName} -r linux-arm --self-contained=false -o {_localhost.OutputDirFullName} {_localhost.ProjectFullName}";
 				process.StartInfo.CreateNoWindow = true;
-
 				process.Start();
 
 				return await process.WaitForExitAsync().ConfigureAwait(true);
