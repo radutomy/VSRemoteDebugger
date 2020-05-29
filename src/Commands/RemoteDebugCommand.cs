@@ -10,7 +10,6 @@ using Renci.SshNet;
 using Task = System.Threading.Tasks.Task;
 using Process = System.Diagnostics.Process;
 using System.Diagnostics;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Linq;
 
@@ -80,11 +79,11 @@ namespace VSRemoteDebugger
 		/// Wrapper around a (alert) messagebox
 		/// </summary>
 		/// <param name="message"></param>
-		private void Mbox(string message) => VsShellUtilities.ShowMessageBox(
+		private void Mbox(string message, string title = "Error") => VsShellUtilities.ShowMessageBox(
 			_package,
 			message,
-			"Error",
-			OLEMSGICON.OLEMSGICON_CRITICAL,
+			title,
+			OLEMSGICON.OLEMSGICON_INFO,
 			OLEMSGBUTTON.OLEMSGBUTTON_OK,
 			OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
 
@@ -141,7 +140,14 @@ namespace VSRemoteDebugger
 							}
 							else
 							{
-								Debug();
+								if (Settings.NoDebug)
+								{
+									Mbox("Files sucessfully transfered to remote machine", "Success");
+								}
+								else
+								{
+									Debug();
+								}
 							}
 						}
 					}
@@ -344,7 +350,15 @@ namespace VSRemoteDebugger
 
 				if (exitcode == 0)
 				{
-					Debug();
+					if (Settings.NoDebug)
+					{ 
+						Mbox("Files sucessfully transfered to remote machine", "Success");
+					}
+					else
+					{
+						Debug();
+					}
+
 					Cleanup();
 				}
 				else

@@ -45,6 +45,7 @@ namespace VSRemoteDebugger
         public string ReleaseFolderPath => AppFolderPath + "/release";
         public bool Publish => LocalPage.Publish;
         public bool UseCommandLineArgs => LocalPage.UseCommandLineArgs;
+        public bool NoDebug => LocalPage.NoDebug;
 
         /// <summary>
         /// VSRemoteDebuggerPackage GUID string.
