@@ -38,7 +38,7 @@ namespace VSRemoteDebugger
         /// <summary>
         /// Space delimited string containing command line arguments
         /// </summary>
-        internal string CommandLineArguments { get; set; }
+        internal string CommandLineArguments { get; set; } = String.Empty;
 
         /// <summary>
         /// Generates a temporary json file and returns its path
@@ -57,8 +57,7 @@ namespace VSRemoteDebugger
             config.type = "coreclr";
             config.request = "launch";
             config.program = _remoteDotnetPath;
-            var jarrObj = new JArray();
-            jarrObj.Add($"./{Assemblyname}.dll");
+            var jarrObj = new JArray($"./{Assemblyname}.dll");
             if (CommandLineArguments.Length > 0)
             {
                 foreach (var arg in CommandLineArguments.Split(' '))

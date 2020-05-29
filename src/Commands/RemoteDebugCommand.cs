@@ -173,8 +173,12 @@ namespace VSRemoteDebugger
 			_localhost.ProjectConfigName = project.ConfigurationManager.ActiveConfiguration.ConfigurationName;
 			_localhost.OutputDirName = project.ConfigurationManager.ActiveConfiguration.Properties.Item("OutputPath").Value.ToString();
 			_localhost.OutputDirFullName = Path.Combine(Path.GetDirectoryName(project.FullName), _localhost.OutputDirName);
-			_localhost.CommandLineArguments = GetArgs(_localhost.SolutionDirPath);
 			
+			if (Settings.UseCommandLineArgs)
+			{
+				_localhost.CommandLineArguments = GetArgs(_localhost.SolutionDirPath);
+			}
+
 			string debugtext = $"ProjectFullName: {_localhost.ProjectFullName} \nProjectName: {_localhost.ProjectName} \n" +
 				$"SolutionFullName: {_localhost.SolutionFullName} \nSolutionDirPath:{_localhost.SolutionDirPath} \n" +
 				$"ProjectConfigname: {_localhost.ProjectConfigName} \nOutputDirName: {_localhost.OutputDirName} \nOutputDirFullName: {_localhost.OutputDirFullName}";
