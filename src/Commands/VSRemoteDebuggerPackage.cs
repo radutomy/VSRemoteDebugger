@@ -1,5 +1,4 @@
 ﻿using System;
-using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Microsoft.VisualStudio.Shell;
@@ -45,6 +44,8 @@ namespace VSRemoteDebugger
         public string DebugFolderPath => AppFolderPath + "/debug";
         public string ReleaseFolderPath => AppFolderPath + "/release";
         public bool Publish => LocalPage.Publish;
+        public bool UseCommandLineArgs => LocalPage.UseCommandLineArgs;
+        public bool NoDebug => LocalPage.NoDebug;
 
         /// <summary>
         /// VSRemoteDebuggerPackage GUID string.

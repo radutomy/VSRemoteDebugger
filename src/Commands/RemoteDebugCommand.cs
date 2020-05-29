@@ -10,6 +10,8 @@ using Renci.SshNet;
 using Task = System.Threading.Tasks.Task;
 using Process = System.Diagnostics.Process;
 using System.Diagnostics;
+using Newtonsoft.Json.Linq;
+using System.Linq;
 
 namespace VSRemoteDebugger
 {
@@ -77,11 +79,11 @@ namespace VSRemoteDebugger
 		/// Wrapper around a (alert) messagebox
 		/// </summary>
 		/// <param name="message"></param>
-		private void Mbox(string message) => VsShellUtilities.ShowMessageBox(
+		private void Mbox(string message, string title = "Error") => VsShellUtilities.ShowMessageBox(
 			_package,
 			message,
-			"Error",
-			OLEMSGICON.OLEMSGICON_CRITICAL,
+			title,
+			OLEMSGICON.OLEMSGICON_INFO,
 			OLEMSGBUTTON.OLEMSGBUTTON_OK,
 			OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
 
@@ -98,7 +100,7 @@ namespace VSRemoteDebugger
 
 			if(!connected)
 			{
-				Mbox($"Cannot connect to  {Settings.UserName}:{Settings.IP}. Connection refused");
+				Mbox($"Cannot connect to {Settings.UserName}:{Settings.IP}. Connection refused");
 			}
 			else
 			{
@@ -138,7 +140,14 @@ namespace VSRemoteDebugger
 							}
 							else
 							{
-								Debug();
+								if (Settings.NoDebug)
+								{
+									Mbox("Files sucessfully transfered to remote machine", "Success");
+								}
+								else
+								{
+									Debug();
+								}
 							}
 						}
 					}
@@ -161,14 +170,20 @@ namespace VSRemoteDebugger
 			}
 
 			_localhost = new LocalHost(Settings.UserName, Settings.IP, Settings.VsDbgPath, Settings.DotnetPath, Settings.DebugFolderPath);
-
+			
 			_localhost.ProjectFullName = project.FullName;
 			_localhost.ProjectName = project.Name;
+			_localhost.Assemblyname = project.Properties.Item("AssemblyName").Value.ToString();
 			_localhost.SolutionFullName = dte.Solution.FullName;
 			_localhost.SolutionDirPath = Path.GetDirectoryName(_localhost.SolutionFullName);
 			_localhost.ProjectConfigName = project.ConfigurationManager.ActiveConfiguration.ConfigurationName;
 			_localhost.OutputDirName = project.ConfigurationManager.ActiveConfiguration.Properties.Item("OutputPath").Value.ToString();
 			_localhost.OutputDirFullName = Path.Combine(Path.GetDirectoryName(project.FullName), _localhost.OutputDirName);
+			
+			if (Settings.UseCommandLineArgs)
+			{
+				_localhost.CommandLineArguments = GetArgs(_localhost.SolutionDirPath);
+			}
 
 			string debugtext = $"ProjectFullName: {_localhost.ProjectFullName} \nProjectName: {_localhost.ProjectName} \n" +
 				$"SolutionFullName: {_localhost.SolutionFullName} \nSolutionDirPath:{_localhost.SolutionDirPath} \n" +
@@ -236,7 +251,6 @@ namespace VSRemoteDebugger
 				process.StartInfo.FileName = "dotnet";
 				process.StartInfo.Arguments = $@"publish -c {_localhost.ProjectConfigName} -r linux-arm --self-contained=false -o {_localhost.OutputDirFullName} {_localhost.ProjectFullName}";
 				process.StartInfo.CreateNoWindow = true;
-
 				process.Start();
 
 				return await process.WaitForExitAsync().ConfigureAwait(true);
@@ -336,7 +350,15 @@ namespace VSRemoteDebugger
 
 				if (exitcode == 0)
 				{
-					Debug();
+					if (Settings.NoDebug)
+					{ 
+						Mbox("Files sucessfully transfered to remote machine", "Success");
+					}
+					else
+					{
+						Debug();
+					}
+
 					Cleanup();
 				}
 				else
@@ -344,6 +366,43 @@ namespace VSRemoteDebugger
 					Mbox("Transferring files failed");
 				}
 			}
+		}
+
+		/// <summary>
+		/// Tries to search for a file "launchSettings.json", which is used by Visual Studio to store the command line arguments
+		/// </summary>
+		/// <param name="slnDirPath"></param>
+		/// <remarks>If using multiple debugging profiles, this will not work</remarks>
+		/// <returns>The debugging command arguments set in Project Settings -> Debug -> Command Line Arguments</returns>
+		private string GetArgs(string slnDirPath)
+		{
+			string args = String.Empty;
+			string[] launchSettingsOccurences = Directory.GetFiles(slnDirPath, "launchSettings.json", SearchOption.AllDirectories);
+
+			if (launchSettingsOccurences.Length == 1)
+			{
+				var jobj = JObject.Parse(File.ReadAllText(launchSettingsOccurences[0]));
+
+				var commandLineArgsOccurences = jobj.SelectTokens("$..commandLineArgs")
+					.Select(t => t.Value<string>())
+					.ToList();
+
+				if (commandLineArgsOccurences.Count > 1)
+				{
+					Mbox("Multiple debugging profiles detected. Due to Visual Studio API limitations, command line arguments cannot be used. \n" +
+						 "Please turn off Command Line Arguments in the extension settings page");
+				}
+				else if (commandLineArgsOccurences.Count == 1)
+				{
+					args = commandLineArgsOccurences[0];
+				}
+			}
+			else if (launchSettingsOccurences.Length > 1)
+			{
+				Mbox("Cannot read command line arguments");
+			}
+
+			return args;
 		}
 	}
 }
