@@ -29,7 +29,7 @@ Make sure the keys are working before proceeding!!
 - Remote debugging only available for ARM-based machines (for now)
 - Visual feedback is poor when running for the first time
 - Not tested (and most likely not working) for 32-bit versions of Windows
-- SSH keys need to be located in the folders specified above (for now)
+- Command line arguments can be used as long as the project doesn't have more than one debugging profile (check by going to Visual Studio -> Project Settings -> Debugging -> Profile dropdown). If the dropdown has more than one entry, then command line arguments cannot be used.
 
 ## Publish vs Build
 
