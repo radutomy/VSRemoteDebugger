@@ -227,7 +227,24 @@ namespace VSRemoteDebugger
 		/// <summary>
 		/// Instals VS Debugger if it doesn't exist already
 		/// </summary>
-		private void TryInstallVsDbg() => Bash("[ -d ~/.vsdbg ] || curl -sSL https://aka.ms/getvsdbgsh | bash /dev/stdin -r linux-arm -v latest -l ~/.vsdbg");
+		private void TryInstallVsDbg()
+		{
+			string arch = Bash("uname -m").Trim('\n');
+
+			switch (arch)
+			{
+				case "arm7l":
+					Bash("[ -d ~/.vsdbg ] || curl -sSL https://aka.ms/getvsdbgsh | bash /dev/stdin -r linux-arm -v latest -l ~/.vsdbg");
+					break;
+
+				case "aarch64":
+					Bash("[ -d ~/.vsdbg ] || curl -sSL https://aka.ms/getvsdbgsh | bash /dev/stdin -r linux-arm64 -v latest -l ~/.vsdbg");
+					break;
+
+				default:
+					break;
+			}
+		}
 
 		private void Build()
 		{
@@ -304,7 +321,7 @@ namespace VSRemoteDebugger
 			BuildEvents.OnBuildProjConfigDone -= BuildEvents_OnBuildProjConfigDone;
 		}
 
-		private void Bash(string cmd)
+		private string Bash(string cmd)
 		{
 			var connInfo = new PrivateKeyFile[] { new PrivateKeyFile(LocalHost.SSH_KEY_PATH) };
 
@@ -314,8 +331,10 @@ namespace VSRemoteDebugger
 				{
 					client.ConnectionInfo.Timeout = TimeSpan.FromSeconds(5);
 					client.Connect();
-					var result = client.RunCommand(cmd);
+					var sshcmd = client.RunCommand(cmd);
 					client.Disconnect();
+
+					return sshcmd.Result;
 				}
 			}
 			catch(Exception)
