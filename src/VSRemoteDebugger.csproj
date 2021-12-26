@@ -68,6 +68,10 @@
   </ItemGroup>
   <ItemGroup>
     <Reference Include="Microsoft.CSharp" />
+    <Reference Include="Renci.SshNet, Version=2017.0.0.0, Culture=neutral, PublicKeyToken=1cee9f8bde3db106, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>TempRenciDLLRemoveWhenNugetUpdated\Renci.SshNet.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
     <Reference Include="System.Design" />
@@ -88,9 +92,6 @@
     </PackageReference>
     <PackageReference Include="Newtonsoft.Json">
       <Version>13.0.1</Version>
-    </PackageReference>
-    <PackageReference Include="SSH.NET">
-      <Version>2020.0.1</Version>
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
