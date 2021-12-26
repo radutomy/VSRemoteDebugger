@@ -96,58 +96,57 @@ namespace VSRemoteDebugger
 		{
 			await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
-			bool connected = await Task.Run(() => CheckConnWithRemote()).ConfigureAwait(true);
+			try { 
+				bool connected = await Task.Run(() => CheckConnWithRemote()).ConfigureAwait(true);
+			} catch (Exception connection_exception)
+            {
+				Mbox($"Cannot connect to {Settings.UserName}:{Settings.IP}.:" + connection_exception.ToString());
+				return;
+			}
 
-			if(!connected)
+			if (!InitSolution())
 			{
-				Mbox($"Cannot connect to {Settings.UserName}:{Settings.IP}. Connection refused");
+				Mbox("Please select a startup project");
 			}
 			else
 			{
-				if (!InitSolution())
+				await Task.Run(() =>
 				{
-					Mbox("Please select a startup project");
+					TryInstallVsDbg();
+					MkDir();
+					Clean();
+
+				}).ConfigureAwait(true);
+
+				if (!Settings.Publish)
+				{
+					Build(); // once this finishes it will raise an event; see BuildEvents_OnBuildDone
 				}
 				else
 				{
-					await Task.Run(() =>
-					{
-						TryInstallVsDbg();
-						MkDir();
-						Clean();
+					int exitcode = await PublishAsync().ConfigureAwait(true);
 
-					}).ConfigureAwait(true);
-
-					if (!Settings.Publish)
+					if (exitcode != 0)
 					{
-						Build(); // once this finishes it will raise an event; see BuildEvents_OnBuildDone
+						Mbox("File transfer to Remote Machine failed");
 					}
 					else
 					{
-						int exitcode = await PublishAsync().ConfigureAwait(true);
+						exitcode = await TransferFilesAsync().ConfigureAwait(true);
 
 						if (exitcode != 0)
 						{
-							Mbox("File transfer to Remote Machine failed");
+							Mbox("Build failed");
 						}
 						else
 						{
-							exitcode = await TransferFilesAsync().ConfigureAwait(true);
-
-							if (exitcode != 0)
+							if (Settings.NoDebug)
 							{
-								Mbox("Build failed");
+								Mbox("Files sucessfully transfered to remote machine", "Success");
 							}
 							else
 							{
-								if (Settings.NoDebug)
-								{
-									Mbox("Files sucessfully transfered to remote machine", "Success");
-								}
-								else
-								{
-									Debug();
-								}
+								Debug();
 							}
 						}
 					}
@@ -205,7 +204,7 @@ namespace VSRemoteDebugger
 			}
 			catch(Exception)
 			{
-				return false;
+				throw;
 			}
 		}
 
@@ -251,7 +250,11 @@ namespace VSRemoteDebugger
 			ThreadHelper.ThrowIfNotOnUIThread();
 			var dte = (DTE)Package.GetGlobalService(typeof(DTE));
 			BuildEvents = dte.Events.BuildEvents;
+			// For some reason, cleanup isn't actually always ran when there has been an error.
+			// This removes the fact that if you run a debug attempt, get a file error, that you don't get 2 message boxes, 3 message boxes, etc for each attempt.
+			BuildEvents.OnBuildDone -= BuildEvents_OnBuildDone; 
 			BuildEvents.OnBuildDone += BuildEvents_OnBuildDone;
+			BuildEvents.OnBuildProjConfigDone -= BuildEvents_OnBuildProjConfigDone;
 			BuildEvents.OnBuildProjConfigDone += BuildEvents_OnBuildProjConfigDone;
 			dte.SuppressUI = false;
 			dte.Solution.SolutionBuild.BuildProject(_localhost.ProjectConfigName, _localhost.ProjectFullName);
