@@ -1,5 +1,5 @@
 # VSRemoteDebugger
-Remote SSH Debugging tool for Visual Studio 2019 (ARM/ARM64/Raspberry Pi compatible)
+Remote SSH Debugging tool for Visual Studio 2022 (ARM/ARM64/Raspberry Pi compatible)
 
 [![Build Status](https://dev.azure.com/radutomy0781/radutomy/_apis/build/status/radutomy.VSRemoteDebugger?branchName=master)](https://dev.azure.com/radutomy0781/radutomy/_build/latest?definitionId=5&branchName=master)
 
@@ -32,6 +32,7 @@ Make sure the keys are working before proceeding!!
 - Visual feedback is poor when running for the first time
 - Not tested (and most likely not working) for 32-bit versions of Windows
 - Command line arguments can be used as long as the project doesn't have more than one debugging profile (check by going to Visual Studio -> Project Settings -> Debugging -> Profile dropdown). If the dropdown has more than one entry, then command line arguments cannot be used.
+- Currently not compatible with Open-SSH 8.8 due to underlying library bug.
 
 ## Publish vs Build
 
