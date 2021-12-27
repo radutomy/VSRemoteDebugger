@@ -48,7 +48,7 @@ namespace VSRemoteDebugger
         {
             dynamic json = new JObject();
             json.version = "0.2.0";
-            json.adapter = "c:\\windows\\sysnative\\openssh\\ssh.exe";
+            json.adapter = "ssh.exe";
             json.adapterArgs = $"-i {SSH_KEY_PATH} {_remoteUserName}@{_remoteIP} {_remoteVsDbgPath} --interpreter=vscode";
 
             json.configurations = new JArray() as dynamic;

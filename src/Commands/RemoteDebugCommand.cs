@@ -132,11 +132,11 @@ namespace VSRemoteDebugger
 					}
 					else
 					{
-						exitcode = await TransferFilesAsync().ConfigureAwait(true);
+						string errormessage = await TransferFilesAsync().ConfigureAwait(true);
 
-						if (exitcode != 0)
+						if (errormessage != "")
 						{
-							Mbox("Build failed");
+							Mbox("Build failed: " + errormessage);
 						}
 						else
 						{
@@ -230,7 +230,11 @@ namespace VSRemoteDebugger
 		{
 			string arch = Bash("uname -m").Trim('\n');
 
-			switch (arch)
+
+			// It seems like the latest versions of getvsdbgsh actually figures out the right version itself
+			Bash("[ -d ~/.vsdbg ] || curl -sSL https://aka.ms/getvsdbgsh | bash /dev/stdin -v latest -l ~/.vsdbg");
+
+			/*switch (arch)
 			{
 				case "arm7l":
 					Bash("[ -d ~/.vsdbg ] || curl -sSL https://aka.ms/getvsdbgsh | bash /dev/stdin -r linux-arm -v latest -l ~/.vsdbg");
@@ -242,7 +246,7 @@ namespace VSRemoteDebugger
 
 				default:
 					break;
-			}
+			}*/
 		}
 
 		private void Build()
@@ -281,28 +285,56 @@ namespace VSRemoteDebugger
 		/// Transfers the files to remote asynchronously. The transfer is done via an external process
 		/// </summary>
 		/// <returns></returns>
-		private async Task<int> TransferFilesAsync()
+		private async Task<string> TransferFilesAsync()
 		{
 			try
 			{
+				Bash($@"mkdir -p {Settings.DebugFolderPath}"); // Make sure the folder exists. Removes an annoying 'file not found' exception.
+
 				using (var process = new Process())
 				{
 					process.StartInfo = new ProcessStartInfo
 					{
-						FileName = "c:\\windows\\sysnative\\openssh\\scp.exe",
+						FileName = "scp",
 						Arguments = $@"-pr {_localhost.OutputDirFullName}\* {Settings.UserName}@{Settings.IP}:{Settings.DebugFolderPath}",
 						RedirectStandardOutput = true,
+						RedirectStandardError = true,
 						UseShellExecute = false,
 						CreateNoWindow = true,
 					};
 
+					string output = "";
+
+
 					process.Start();
-					return await process.WaitForExitAsync().ConfigureAwait(true);
+
+
+					process.OutputDataReceived += new DataReceivedEventHandler((sender, e) =>
+					{
+						output += e.Data;
+					});
+					process.BeginOutputReadLine();
+
+					process.ErrorDataReceived += new DataReceivedEventHandler((sender, e) =>
+					{
+						output += e.Data;
+					});
+					process.BeginErrorReadLine();
+
+					await process.WaitForExitAsync().ConfigureAwait(true);
+
+					if(process.ExitCode != 0)
+                    {
+						//string output = await process.StandardOutput.ReadToEndAsync();
+						return "Error in file copy, scp returned error code: " + process.ExitCode.ToString() + "\r\n" + output;
+                    }
+
+					return "";
 				}
 			}
-			catch(Exception)
+			catch(Exception e)
 			{
-				return -1;
+				return e.ToString();
 			}
 		}
 
@@ -368,9 +400,9 @@ namespace VSRemoteDebugger
 		{
 			if (_isBuildSucceeded)
 			{
-				int exitcode = await TransferFilesAsync().ConfigureAwait(true);
+				string errormessage = await TransferFilesAsync().ConfigureAwait(true);
 
-				if (exitcode == 0)
+				if (errormessage == "")
 				{
 					if (Settings.NoDebug)
 					{ 
@@ -385,7 +417,7 @@ namespace VSRemoteDebugger
 				}
 				else
 				{
-					Mbox("Transferring files failed");
+					Mbox("Transferring files failed: " + errormessage);
 				}
 			}
 		}
