@@ -23,6 +23,17 @@
   <!--The Commands section is where commands, menus, and menu groups are defined.
       This section uses a Guid to identify the package that provides the command defined inside it. -->
   <Commands package="guidVSRemoteDebuggerPackage">
+	 <Menus>
+		  <Menu guid="guidVSRemoteDebuggerPackageCmdSet" id="Toolbar"
+			  type="Toolbar" >
+			  <CommandFlag>DefaultDocked</CommandFlag>
+			  <Strings>
+				  <ButtonText>VSRemoteDebugger Toolbar</ButtonText>
+				  <CommandName>VSRemoteDebugger Toolbar</CommandName>
+			  </Strings>
+		  </Menu>
+	  </Menus>
+	  
     <!-- Inside this section we have different sub-sections: one for the menus, another
     for the menu groups, one for the buttons (the actual commands), one for the combos
     and the last one for the bitmaps used. Each element is identified by a command id that
@@ -39,6 +50,10 @@
       <Group guid="guidVSRemoteDebuggerPackageCmdSet" id="MyMenuGroup" priority="0x0600">
         <Parent guid="guidSHLMainMenu" id="IDM_VS_MENU_TOOLS"/>
       </Group>
+      <Group guid="guidVSRemoteDebuggerPackageCmdSet" id="ToolbarGroup"
+        priority="0x0000">
+        <Parent guid="guidVSRemoteDebuggerPackageCmdSet" id="Toolbar"/>
+	  </Group>
     </Groups>
 
     <!--Buttons section. -->
@@ -52,13 +67,20 @@
               <CommandFlag>DefaultInvisible</CommandFlag>
               <CommandFlag>DynamicVisibility</CommandFlag>
           If you do not want an image next to your command, remove the Icon node /> -->
-      <Button guid="guidVSRemoteDebuggerPackageCmdSet" id="RemoteDebugId" priority="0x0100" type="Button">
-        <Parent guid="guidVSRemoteDebuggerPackageCmdSet" id="MyMenuGroup" />
-        <Icon guid="guidImages" id="bmpPic1" />
-        <Strings>
-          <ButtonText>Start Remote Debugging</ButtonText>
-        </Strings>
-      </Button>
+          <Button guid="guidVSRemoteDebuggerPackageCmdSet" id="RemoteDebugId" priority="0x0100" type="Button">
+            <Parent guid="guidVSRemoteDebuggerPackageCmdSet" id="MyMenuGroup" />
+            <Icon guid="guidImages" id="bmpPic1" />
+            <Strings>
+              <ButtonText>Start Remote Debugging</ButtonText>
+            </Strings>
+          </Button>
+		  <Button guid="guidVSRemoteDebuggerPackageCmdSet" id="RemoteDebugId" priority="0x0100" type="Button">
+		    <Parent guid= "guidVSRemoteDebuggerPackageCmdSet" id="ToolbarGroup" />
+			<Icon guid="guidImages" id="bmpPic1" />
+			<Strings>
+			  <ButtonText>Invoke ToolbarTestCommand</ButtonText>
+			</Strings>
+		  </Button>
     </Buttons>
 
     <!--The bitmaps section is used to define the bitmaps that are used for the commands.-->
@@ -80,6 +102,8 @@
     <GuidSymbol name="guidVSRemoteDebuggerPackageCmdSet" value="{5b4eaa99-73ea-49a5-99c3-bd64eecafa37}">
       <IDSymbol name="MyMenuGroup" value="0x1020" />
       <IDSymbol name="RemoteDebugId" value="0x0100" />
+      <IDSymbol name="Toolbar" value="0x1000" />
+      <IDSymbol name="ToolbarGroup" value="0x1050" />
     </GuidSymbol>
 
     <GuidSymbol name="guidImages" value="{cc9d8487-6404-47f7-a526-f95f682defc0}" >
