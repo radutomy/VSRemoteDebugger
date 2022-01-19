@@ -96,58 +96,57 @@ namespace VSRemoteDebugger
 		{
 			await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
-			bool connected = await Task.Run(() => CheckConnWithRemote()).ConfigureAwait(true);
+			try { 
+				bool connected = await Task.Run(() => CheckConnWithRemote()).ConfigureAwait(true);
+			} catch (Exception connection_exception)
+            {
+				Mbox($"Cannot connect to {Settings.UserName}:{Settings.IP}.:" + connection_exception.ToString());
+				return;
+			}
 
-			if(!connected)
+			if (!InitSolution())
 			{
-				Mbox($"Cannot connect to {Settings.UserName}:{Settings.IP}. Connection refused");
+				Mbox("Please select a startup project");
 			}
 			else
 			{
-				if (!InitSolution())
+				await Task.Run(() =>
 				{
-					Mbox("Please select a startup project");
+					TryInstallVsDbg();
+					MkDir();
+					Clean();
+
+				}).ConfigureAwait(true);
+
+				if (!Settings.Publish)
+				{
+					Build(); // once this finishes it will raise an event; see BuildEvents_OnBuildDone
 				}
 				else
 				{
-					await Task.Run(() =>
-					{
-						TryInstallVsDbg();
-						MkDir();
-						Clean();
+					int exitcode = await PublishAsync().ConfigureAwait(true);
 
-					}).ConfigureAwait(true);
-
-					if (!Settings.Publish)
+					if (exitcode != 0)
 					{
-						Build(); // once this finishes it will raise an event; see BuildEvents_OnBuildDone
+						Mbox("File transfer to Remote Machine failed");
 					}
 					else
 					{
-						int exitcode = await PublishAsync().ConfigureAwait(true);
+						string errormessage = await TransferFilesAsync().ConfigureAwait(true);
 
-						if (exitcode != 0)
+						if (errormessage != "")
 						{
-							Mbox("File transfer to Remote Machine failed");
+							Mbox("Build failed: " + errormessage);
 						}
 						else
 						{
-							exitcode = await TransferFilesAsync().ConfigureAwait(true);
-
-							if (exitcode != 0)
+							if (Settings.NoDebug)
 							{
-								Mbox("Build failed");
+								Mbox("Files sucessfully transfered to remote machine", "Success");
 							}
 							else
 							{
-								if (Settings.NoDebug)
-								{
-									Mbox("Files sucessfully transfered to remote machine", "Success");
-								}
-								else
-								{
-									Debug();
-								}
+								Debug();
 							}
 						}
 					}
@@ -205,7 +204,7 @@ namespace VSRemoteDebugger
 			}
 			catch(Exception)
 			{
-				return false;
+				throw;
 			}
 		}
 
@@ -231,7 +230,11 @@ namespace VSRemoteDebugger
 		{
 			string arch = Bash("uname -m").Trim('\n');
 
-			switch (arch)
+
+			// It seems like the latest versions of getvsdbgsh actually figures out the right version itself
+			Bash("[ -d ~/.vsdbg ] || curl -sSL https://aka.ms/getvsdbgsh | bash /dev/stdin -v latest -l ~/.vsdbg");
+
+			/*switch (arch)
 			{
 				case "arm7l":
 					Bash("[ -d ~/.vsdbg ] || curl -sSL https://aka.ms/getvsdbgsh | bash /dev/stdin -r linux-arm -v latest -l ~/.vsdbg");
@@ -243,7 +246,7 @@ namespace VSRemoteDebugger
 
 				default:
 					break;
-			}
+			}*/
 		}
 
 		private void Build()
@@ -251,7 +254,11 @@ namespace VSRemoteDebugger
 			ThreadHelper.ThrowIfNotOnUIThread();
 			var dte = (DTE)Package.GetGlobalService(typeof(DTE));
 			BuildEvents = dte.Events.BuildEvents;
+			// For some reason, cleanup isn't actually always ran when there has been an error.
+			// This removes the fact that if you run a debug attempt, get a file error, that you don't get 2 message boxes, 3 message boxes, etc for each attempt.
+			BuildEvents.OnBuildDone -= BuildEvents_OnBuildDone; 
 			BuildEvents.OnBuildDone += BuildEvents_OnBuildDone;
+			BuildEvents.OnBuildProjConfigDone -= BuildEvents_OnBuildProjConfigDone;
 			BuildEvents.OnBuildProjConfigDone += BuildEvents_OnBuildProjConfigDone;
 			dte.SuppressUI = false;
 			dte.Solution.SolutionBuild.BuildProject(_localhost.ProjectConfigName, _localhost.ProjectFullName);
@@ -278,28 +285,56 @@ namespace VSRemoteDebugger
 		/// Transfers the files to remote asynchronously. The transfer is done via an external process
 		/// </summary>
 		/// <returns></returns>
-		private async Task<int> TransferFilesAsync()
+		private async Task<string> TransferFilesAsync()
 		{
 			try
 			{
+				Bash($@"mkdir -p {Settings.DebugFolderPath}"); // Make sure the folder exists. Removes an annoying 'file not found' exception.
+
 				using (var process = new Process())
 				{
 					process.StartInfo = new ProcessStartInfo
 					{
-						FileName = "c:\\windows\\sysnative\\openssh\\scp.exe",
+						FileName = "scp",
 						Arguments = $@"-pr {_localhost.OutputDirFullName}\* {Settings.UserName}@{Settings.IP}:{Settings.DebugFolderPath}",
 						RedirectStandardOutput = true,
+						RedirectStandardError = true,
 						UseShellExecute = false,
 						CreateNoWindow = true,
 					};
 
+					string output = "";
+
+
 					process.Start();
-					return await process.WaitForExitAsync().ConfigureAwait(true);
+
+
+					process.OutputDataReceived += new DataReceivedEventHandler((sender, e) =>
+					{
+						output += e.Data;
+					});
+					process.BeginOutputReadLine();
+
+					process.ErrorDataReceived += new DataReceivedEventHandler((sender, e) =>
+					{
+						output += e.Data;
+					});
+					process.BeginErrorReadLine();
+
+					await process.WaitForExitAsync().ConfigureAwait(true);
+
+					if(process.ExitCode != 0)
+                    {
+						//string output = await process.StandardOutput.ReadToEndAsync();
+						return "Error in file copy, scp returned error code: " + process.ExitCode.ToString() + "\r\n" + output;
+                    }
+
+					return "";
 				}
 			}
-			catch(Exception)
+			catch(Exception e)
 			{
-				return -1;
+				return e.ToString();
 			}
 		}
 
@@ -365,9 +400,9 @@ namespace VSRemoteDebugger
 		{
 			if (_isBuildSucceeded)
 			{
-				int exitcode = await TransferFilesAsync().ConfigureAwait(true);
+				string errormessage = await TransferFilesAsync().ConfigureAwait(true);
 
-				if (exitcode == 0)
+				if (errormessage == "")
 				{
 					if (Settings.NoDebug)
 					{ 
@@ -382,7 +417,7 @@ namespace VSRemoteDebugger
 				}
 				else
 				{
-					Mbox("Transferring files failed");
+					Mbox("Transferring files failed: " + errormessage);
 				}
 			}
 		}
