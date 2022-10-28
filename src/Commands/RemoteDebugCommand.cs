@@ -270,10 +270,13 @@ namespace VSRemoteDebugger
 		/// <returns></returns>
 		private async Task<int> PublishAsync()
 		{
-			using(var process = new Process())
+            string arch = Bash("uname -m").Trim('\n');
+			arch = arch == "aarch64" ? "arm64" : "arm";
+
+            using (var process = new Process())
 			{
 				process.StartInfo.FileName = "dotnet";
-				process.StartInfo.Arguments = $@"publish -c {_localhost.ProjectConfigName} -r linux-arm --self-contained=false -o {_localhost.OutputDirFullName} {_localhost.ProjectFullName}";
+				process.StartInfo.Arguments = $@"publish -c {_localhost.ProjectConfigName} -r linux-{arch} --self-contained=false -o {_localhost.OutputDirFullName} {_localhost.ProjectFullName}";
 				process.StartInfo.CreateNoWindow = true;
 				process.Start();
 
